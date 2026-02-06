@@ -23,6 +23,15 @@ export const metadata: Metadata = {
   description:
     "Turn happy customers into your best salespeople. Reward referrals with points, tiers, and prizes. Built for solar, roofing, HVAC, and more.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io"),
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/apple-icon.svg", type: "image/svg+xml" },
+    ],
+  },
+  manifest: "/manifest.json",
   openGraph: {
     title: "Connect Reward",
     description:
