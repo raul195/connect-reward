@@ -162,12 +162,44 @@ export default function AdminDashboard() {
     { label: "Invite Team", href: "/admin/team", icon: Users, color: "text-purple-600 bg-purple-100" },
   ];
 
+  const isEmpty = metrics.activeCustomers === 0 && metrics.totalReferrals === 0;
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
         <p className="text-muted-foreground">Manage your referral program and track performance.</p>
       </div>
+
+      {/* Welcome banner for new users */}
+      {isEmpty && (
+        <Card className="border-teal-200 bg-gradient-to-r from-teal-50 to-emerald-50">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center text-center gap-4 sm:flex-row sm:text-left">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-100 text-teal-600">
+                <Trophy className="h-7 w-7" />
+              </span>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold">Welcome to Connect Reward!</h2>
+                <p className="text-muted-foreground mt-1">
+                  Get started by setting up your services, creating rewards for your customers, and adding your first customer.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap justify-center gap-3 sm:justify-start">
+              <Button asChild className="bg-teal-600 hover:bg-teal-700">
+                <Link href="/admin/settings">Set Up Services</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/admin/rewards">Create Rewards</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/admin/customers">Add Customers</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Metric Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

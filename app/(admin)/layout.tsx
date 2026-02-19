@@ -78,7 +78,6 @@ export default function AdminLayout({
         <Header
           fullName={profile?.full_name}
           email={profile?.email}
-          totalPoints={profile?.total_points}
           avatarUrl={profile?.avatar_url}
         />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">

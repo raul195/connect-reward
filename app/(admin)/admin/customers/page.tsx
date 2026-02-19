@@ -25,6 +25,7 @@ import {
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AddressAutocomplete } from "@/components/shared/AddressAutocomplete";
 import { Search, UserPlus, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Profile, LoyaltyTier } from "@/lib/types";
 
@@ -113,29 +114,29 @@ export default function CustomersPage() {
       return;
     }
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.admin.createUser({
-      email: newEmail,
-      password: Math.random().toString(36).slice(-12),
-      user_metadata: { full_name: newName, role: "customer" },
-      email_confirm: true,
-    });
-
-    if (error) {
-      // Fallback: insert profile directly (admin API may not be available client-side)
-      const { error: pError } = await supabase.from("profiles").insert({
-        id: crypto.randomUUID(),
-        company_id: adminProfile.company_id,
-        role: "customer",
-        full_name: newName,
-        email: newEmail,
-        phone: newPhone,
-        address: newAddress || null,
-        city: newCity || null,
-        state: newState || null,
-        zip: newZip || null,
+    try {
+      const res = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: newName.trim(),
+          email: newEmail.trim(),
+          phone: phoneDigits,
+          address: newAddress || null,
+          city: newCity || null,
+          state: newState || null,
+          zip: newZip || null,
+        }),
       });
-      if (pError) { toast.error("Failed to add customer."); return; }
+
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Failed to add customer.");
+        return;
+      }
+    } catch {
+      toast.error("Failed to add customer.");
+      return;
     }
 
     toast.success(`${newName} added!`);
@@ -298,7 +299,16 @@ export default function CustomersPage() {
             </div>
             <div className="space-y-2">
               <Label>Street Address</Label>
-              <Input value={newAddress} onChange={(e) => setNewAddress(e.target.value)} placeholder="123 Main St" />
+              <AddressAutocomplete
+                value={newAddress}
+                onChange={setNewAddress}
+                onSelect={(addr) => {
+                  setNewAddress(addr.street);
+                  setNewCity(addr.city);
+                  setNewState(addr.state);
+                  setNewZip(addr.zip);
+                }}
+              />
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-2">

@@ -43,23 +43,25 @@ export function Header({
 
       {/* Right section */}
       <div className="flex items-center gap-3">
-        {/* Points pill */}
-        <Badge variant="secondary" className="hidden sm:flex gap-1 font-semibold">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M6 3h12l4 6-10 13L2 9Z" />
-          </svg>
-          {totalPoints.toLocaleString()} pts
-        </Badge>
+        {/* Points pill — only shown for customers who have points */}
+        {totalPoints != null && totalPoints > 0 && (
+          <Badge variant="secondary" className="hidden sm:flex gap-1 font-semibold">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M6 3h12l4 6-10 13L2 9Z" />
+            </svg>
+            {totalPoints.toLocaleString()} pts
+          </Badge>
+        )}
 
         {/* Notification bell */}
         <Button variant="ghost" size="icon" className="relative">

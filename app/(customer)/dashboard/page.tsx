@@ -343,8 +343,37 @@ export default function CustomerDashboard() {
 
   if (!profile) return null;
 
+  const isNewUser = stats.totalReferrals === 0 && profile.total_points === 0;
+
   return (
     <div className="space-y-6">
+      {/* Welcome banner for new customers */}
+      {isNewUser && (
+        <Card className="border-teal-200 bg-gradient-to-r from-teal-50 to-emerald-50">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center text-center gap-4 sm:flex-row sm:text-left">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-teal-100 text-teal-600">
+                <Trophy className="h-7 w-7" />
+              </span>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold">Welcome to the Rewards Program!</h2>
+                <p className="text-muted-foreground mt-1">
+                  Earn points by referring friends and family. Redeem your points for exclusive rewards!
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap justify-center gap-3 sm:justify-start">
+              <Button asChild className="bg-teal-600 hover:bg-teal-700">
+                <Link href="/dashboard/refer">Submit Your First Referral</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/dashboard/rewards">Browse Rewards</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <PointsCard profile={profile} />
       <StatsGrid stats={stats} />
       <div className="grid gap-6 lg:grid-cols-2">
