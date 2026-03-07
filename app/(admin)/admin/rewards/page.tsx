@@ -20,9 +20,9 @@ import {
 } from "@/components/ui/select";
 import { UpgradeCTA } from "@/components/shared/UpgradeCTA";
 import { Plus, Pencil, Trash2, Gift, Lock, CreditCard, Plane, Monitor, Ticket, Home } from "lucide-react";
-import type { Reward, RewardType } from "@/lib/types";
+import type { Reward, RewardCategory } from "@/lib/types";
 
-const CATEGORIES: { value: RewardType; label: string }[] = [
+const CATEGORIES: { value: RewardCategory; label: string }[] = [
   { value: "gift_card", label: "Gift Cards" },
   { value: "discount", label: "Discounts" },
   { value: "cashback", label: "Cashback" },
@@ -41,13 +41,13 @@ const CAT_ICONS: Record<string, React.ReactNode> = {
 interface RewardForm {
   name: string;
   description: string;
-  points_cost: string;
-  type: RewardType;
-  quantity_left: string;
-  active: boolean;
+  points_required: string;
+  type: RewardCategory;
+  quantity_available: string;
+  is_active: boolean;
 }
 
-const emptyForm: RewardForm = { name: "", description: "", points_cost: "", type: "gift_card", quantity_left: "", active: true };
+const emptyForm: RewardForm = { name: "", description: "", points_required: "", type: "gift_card", quantity_available: "", is_active: true };
 
 export default function RewardsManagement() {
   const { profile } = useProfile();
@@ -60,7 +60,7 @@ export default function RewardsManagement() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const isFreePlan = company?.plan === "free";
+  const isFreePlan = company?.plan_tier === "free";
 
   const fetchRewards = useCallback(async () => {
     if (!profile?.company_id) return;
@@ -83,26 +83,26 @@ export default function RewardsManagement() {
     setForm({
       name: r.name,
       description: r.description ?? "",
-      points_cost: String(r.points_cost),
-      type: r.type,
-      quantity_left: r.quantity_left !== null ? String(r.quantity_left) : "",
-      active: r.active,
+      points_required: String(r.points_required),
+      type: r.category,
+      quantity_available: r.quantity_available !== null ? String(r.quantity_available) : "",
+      is_active: r.is_active,
     });
     setModalOpen(true);
   }
 
   async function handleSave() {
-    if (!profile?.company_id || !form.name || !form.points_cost) return;
+    if (!profile?.company_id || !form.name || !form.points_required) return;
     setSaving(true);
     const supabase = createClient();
     const payload = {
       company_id: profile.company_id,
       name: form.name,
       description: form.description || null,
-      points_cost: parseInt(form.points_cost),
-      type: form.type,
-      quantity_left: form.quantity_left ? parseInt(form.quantity_left) : null,
-      active: form.active,
+      points_required: parseInt(form.points_required),
+      category: form.type,
+      quantity_available: form.quantity_available ? parseInt(form.quantity_available) : null,
+      is_active: form.is_active,
     };
 
     if (editing) {
@@ -128,8 +128,8 @@ export default function RewardsManagement() {
 
   async function toggleActive(id: string, active: boolean) {
     const supabase = createClient();
-    await supabase.from("rewards").update({ active }).eq("id", id);
-    setRewards(prev => prev.map(r => r.id === id ? { ...r, active } : r));
+    await supabase.from("rewards").update({ is_active: active }).eq("id", id);
+    setRewards(prev => prev.map(r => r.id === id ? { ...r, is_active: active } : r));
   }
 
   if (loading) {
@@ -167,7 +167,7 @@ export default function RewardsManagement() {
         )}
 
         {rewards.map(r => (
-          <Card key={r.id} className={`relative ${!r.active ? "opacity-60" : ""}`}>
+          <Card key={r.id} className={`relative ${!r.is_active ? "opacity-60" : ""}`}>
             {isFreePlan && (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/50 backdrop-blur-[1px]">
                 <Lock className="h-6 w-6 text-gray-400" />
@@ -176,22 +176,22 @@ export default function RewardsManagement() {
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-                  {CAT_ICONS[r.type] || <Gift className="h-8 w-8" />}
+                  {CAT_ICONS[r.category] || <Gift className="h-8 w-8" />}
                 </div>
                 {!isFreePlan && (
                   <div className="flex items-center gap-1">
-                    <Switch checked={r.active} onCheckedChange={(v) => toggleActive(r.id, v)} />
+                    <Switch checked={r.is_active} onCheckedChange={(v) => toggleActive(r.id, v)} />
                   </div>
                 )}
               </div>
               <h3 className="mt-3 font-bold">{r.name}</h3>
               {r.description && <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{r.description}</p>}
               <div className="mt-3 flex items-center justify-between">
-                <p className="text-xl font-extrabold text-amber-600">{r.points_cost.toLocaleString()} pts</p>
-                <Badge variant="outline">{CATEGORIES.find(c => c.value === r.type)?.label ?? r.type}</Badge>
+                <p className="text-xl font-extrabold text-amber-600">{r.points_required.toLocaleString()} pts</p>
+                <Badge variant="outline">{CATEGORIES.find(c => c.value === r.category)?.label ?? r.category}</Badge>
               </div>
-              {r.quantity_left !== null && (
-                <p className="mt-1 text-xs text-muted-foreground">{r.quantity_left} remaining</p>
+              {r.quantity_available !== null && (
+                <p className="mt-1 text-xs text-muted-foreground">{r.quantity_available} remaining</p>
               )}
               {!isFreePlan && (
                 <div className="mt-3 flex gap-2">
@@ -224,11 +224,11 @@ export default function RewardsManagement() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Points Required *</Label>
-                <Input type="number" min="1" value={form.points_cost} onChange={(e) => setForm(f => ({ ...f, points_cost: e.target.value }))} />
+                <Input type="number" min="1" value={form.points_required} onChange={(e) => setForm(f => ({ ...f, points_required: e.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label>Category</Label>
-                <Select value={form.type} onValueChange={(v) => setForm(f => ({ ...f, type: v as RewardType }))}>
+                <Select value={form.type} onValueChange={(v) => setForm(f => ({ ...f, type: v as RewardCategory }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
@@ -239,10 +239,10 @@ export default function RewardsManagement() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Quantity Available</Label>
-                <Input type="number" min="0" value={form.quantity_left} onChange={(e) => setForm(f => ({ ...f, quantity_left: e.target.value }))} placeholder="Unlimited" />
+                <Input type="number" min="0" value={form.quantity_available} onChange={(e) => setForm(f => ({ ...f, quantity_available: e.target.value }))} placeholder="Unlimited" />
               </div>
               <div className="flex items-center gap-3 pt-6">
-                <Switch checked={form.active} onCheckedChange={(v) => setForm(f => ({ ...f, active: v }))} />
+                <Switch checked={form.is_active} onCheckedChange={(v) => setForm(f => ({ ...f, is_active: v }))} />
                 <Label>Active</Label>
               </div>
             </div>

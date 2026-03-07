@@ -1,23 +1,29 @@
 // ============================================================
-// Database types — mirrors the SQL schema
+// Database types — mirrors the live Supabase schema
 // ============================================================
 
-export type UserRole = "customer" | "contractor" | "super_admin";
-export type ReferralStatus = "pending" | "contacted" | "quoted" | "won" | "lost" | "expired";
-export type RewardType = "discount" | "cashback" | "gift_card" | "service_credit" | "custom";
+export type UserRole = "customer" | "contractor" | "contractor_owner" | "super_admin";
+export type ReferralStatus = "submitted" | "contacted" | "consultation_scheduled" | "installation_complete" | "cancelled";
+export type RewardCategory = string;
 export type RedemptionStatus = "pending" | "approved" | "fulfilled" | "rejected";
 export type NotificationType = "referral_update" | "reward_earned" | "achievement" | "system";
 export type PlanTier = "free" | "starter" | "growth" | "pro";
 export type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
-export type PointTxType = "earned" | "redeemed" | "expired" | "adjusted";
+export type PointTxType = "referral_completed" | "redemption" | "signup_bonus" | "manual_adjustment" | "milestone_bonus";
 
 export interface Company {
   id: string;
   name: string;
   slug: string;
   logo_url: string | null;
-  plan: PlanTier;
+  industry: string | null;
+  plan_tier: PlanTier;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  branding: Record<string, unknown> | null;
   settings: Record<string, unknown>;
+  customer_count: number;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -42,9 +48,14 @@ export interface Profile {
   city: string | null;
   state: string | null;
   zip: string | null;
-  loyalty_tier: LoyaltyTier;
+  tier: LoyaltyTier;
   total_points: number;
+  redeemed_points: number;
+  referral_count: number;
+  status: string;
+  invited_by: string | null;
   notification_preferences: NotificationPreferences;
+  last_activity: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -52,16 +63,21 @@ export interface Profile {
 export interface Referral {
   id: string;
   company_id: string;
-  referrer_id: string;
-  referee_name: string;
-  referee_email: string | null;
-  referee_phone: string | null;
-  service_type: string | null;
+  submitted_by: string;
   service_id: string | null;
-  status: ReferralStatus;
+  referral_name: string;
+  referral_email: string;
+  referral_phone: string | null;
+  referral_address: string | null;
+  referral_city: string | null;
+  referral_state: string | null;
+  referral_zip: string | null;
+  relationship: string | null;
   notes: string | null;
-  job_value: number | null;
+  status: ReferralStatus;
   points_awarded: number;
+  assigned_rep: string | null;
+  status_history: Record<string, unknown>[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -83,12 +99,11 @@ export interface Reward {
   company_id: string;
   name: string;
   description: string | null;
-  type: RewardType;
-  points_cost: number;
-  min_tier: LoyaltyTier;
+  category: RewardCategory;
+  points_required: number;
   image_url: string | null;
-  active: boolean;
-  quantity_left: number | null;
+  is_active: boolean;
+  quantity_available: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -96,22 +111,23 @@ export interface Reward {
 export interface Redemption {
   id: string;
   reward_id: string;
-  profile_id: string;
+  user_id: string;
   company_id: string;
+  points_spent: number;
   status: RedemptionStatus;
+  fulfillment_notes: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface PointTransaction {
   id: string;
-  profile_id: string;
+  user_id: string;
   company_id: string;
   type: PointTxType;
   amount: number;
   description: string | null;
-  referral_id: string | null;
-  redemption_id: string | null;
+  reference_id: string | null;
   created_at: string;
 }
 

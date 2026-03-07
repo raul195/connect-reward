@@ -19,9 +19,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Lock, Gift, CreditCard, Plane, Monitor, Ticket, Home } from "lucide-react";
-import type { Reward, RewardType } from "@/lib/types";
+import type { Reward, RewardCategory } from "@/lib/types";
 
-const CATEGORY_ICONS: Record<RewardType | string, React.ReactNode> = {
+const CATEGORY_ICONS: Record<RewardCategory | string, React.ReactNode> = {
   gift_card: <CreditCard className="h-10 w-10" />,
   discount: <Gift className="h-10 w-10" />,
   cashback: <CreditCard className="h-10 w-10" />,
@@ -51,7 +51,7 @@ export default function RewardsCatalog() {
   const [redeeming, setRedeeming] = useState(false);
   const [userPoints, setUserPoints] = useState(0);
 
-  const isFreePlan = company?.plan === "free";
+  const isFreePlan = company?.plan_tier === "free";
 
   const fetchRewards = useCallback(async () => {
     if (!profile?.company_id) return;
@@ -61,8 +61,8 @@ export default function RewardsCatalog() {
       .from("rewards")
       .select("*")
       .eq("company_id", profile.company_id)
-      .eq("active", true)
-      .order("points_cost", { ascending: true });
+      .eq("is_active", true)
+      .order("points_required", { ascending: true });
 
     if (data) setRewards(data as Reward[]);
     setUserPoints(profile.total_points);
@@ -73,7 +73,7 @@ export default function RewardsCatalog() {
     fetchRewards();
   }, [fetchRewards]);
 
-  const filtered = category === "all" ? rewards : rewards.filter((r) => r.type === category);
+  const filtered = category === "all" ? rewards : rewards.filter((r) => r.category === category);
 
   async function handleRedeem(reward: Reward) {
     if (!profile) return;
@@ -84,7 +84,7 @@ export default function RewardsCatalog() {
     // Insert redemption
     const { error: rError } = await supabase.from("redemptions").insert({
       reward_id: reward.id,
-      profile_id: profile.id,
+      user_id: profile.id,
       company_id: profile.company_id!,
       status: "pending",
     });
@@ -97,20 +97,20 @@ export default function RewardsCatalog() {
 
     // Insert negative point transaction
     await supabase.from("point_transactions").insert({
-      profile_id: profile.id,
+      user_id: profile.id,
       company_id: profile.company_id!,
-      type: "redeemed",
-      amount: -reward.points_cost,
+      type: "redemption",
+      amount: -reward.points_required,
       description: `Redeemed: ${reward.name}`,
     });
 
     // Update profile points
     await supabase
       .from("profiles")
-      .update({ total_points: userPoints - reward.points_cost })
+      .update({ total_points: userPoints - reward.points_required })
       .eq("id", profile.id);
 
-    setUserPoints((prev) => prev - reward.points_cost);
+    setUserPoints((prev) => prev - reward.points_required);
     setRedeemDialog(null);
     setRedeeming(false);
 
@@ -162,8 +162,8 @@ export default function RewardsCatalog() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((reward) => {
-            const canAfford = userPoints >= reward.points_cost;
-            const diff = reward.points_cost - userPoints;
+            const canAfford = userPoints >= reward.points_required;
+            const diff = reward.points_required - userPoints;
 
             return (
               <Card key={reward.id} className="relative overflow-hidden">
@@ -186,17 +186,17 @@ export default function RewardsCatalog() {
 
                 <CardContent className="flex flex-col p-5">
                   <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-                    {CATEGORY_ICONS[reward.type] || <Gift className="h-10 w-10" />}
+                    {CATEGORY_ICONS[reward.category] || <Gift className="h-10 w-10" />}
                   </div>
                   <h3 className="mt-3 font-bold">{reward.name}</h3>
                   {reward.description && (
                     <p className="mt-1 flex-1 text-sm text-muted-foreground line-clamp-2">{reward.description}</p>
                   )}
                   <p className="mt-3 text-2xl font-extrabold text-amber-600">
-                    {reward.points_cost.toLocaleString()} <span className="text-sm font-medium">pts</span>
+                    {reward.points_required.toLocaleString()} <span className="text-sm font-medium">pts</span>
                   </p>
-                  {reward.quantity_left !== null && (
-                    <Badge variant="outline" className="mt-1 w-fit text-xs">{reward.quantity_left} left</Badge>
+                  {reward.quantity_available !== null && (
+                    <Badge variant="outline" className="mt-1 w-fit text-xs">{reward.quantity_available} left</Badge>
                   )}
 
                   {!isFreePlan && (
@@ -224,10 +224,10 @@ export default function RewardsCatalog() {
             <DialogTitle>Redeem {redeemDialog?.name}?</DialogTitle>
             <DialogDescription>
               Redeem <span className="font-semibold">{redeemDialog?.name}</span> for{" "}
-              <span className="font-semibold">{redeemDialog?.points_cost.toLocaleString()}</span> points?
+              <span className="font-semibold">{redeemDialog?.points_required.toLocaleString()}</span> points?
               Your balance will go from{" "}
               <span className="font-semibold">{userPoints.toLocaleString()}</span> to{" "}
-              <span className="font-semibold">{(userPoints - (redeemDialog?.points_cost ?? 0)).toLocaleString()}</span> points.
+              <span className="font-semibold">{(userPoints - (redeemDialog?.points_required ?? 0)).toLocaleString()}</span> points.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">

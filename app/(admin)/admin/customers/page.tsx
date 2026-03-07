@@ -89,7 +89,7 @@ export default function CustomersPage() {
       query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
     }
     if (tierFilter !== "all") {
-      query = query.eq("loyalty_tier", tierFilter);
+      query = query.eq("tier", tierFilter);
     }
 
     const { data, count } = await query;
@@ -109,7 +109,7 @@ export default function CustomersPage() {
     if (!adminProfile?.company_id || !newName.trim() || !newEmail.trim() || !newPhone.trim()) return;
     const phoneDigits = newPhone.replace(/\D/g, "");
     if (phoneDigits.length !== 10) { toast.error("Phone must be 10 digits."); return; }
-    if (company && isAtLimit(company.plan, "customers", total)) {
+    if (company && isAtLimit(company.plan_tier, "customers", total)) {
       toast.error("Customer limit reached. Upgrade your plan.");
       return;
     }
@@ -164,7 +164,7 @@ export default function CustomersPage() {
   }
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
-  const atLimit = company ? isAtLimit(company.plan, "customers", total) : false;
+  const atLimit = company ? isAtLimit(company.plan_tier, "customers", total) : false;
 
   return (
     <div className="space-y-6">
@@ -240,7 +240,7 @@ export default function CustomersPage() {
                       <td className="p-3 font-medium">{c.full_name}</td>
                       <td className="p-3 hidden md:table-cell text-muted-foreground">{c.email}</td>
                       <td className="p-3 text-right font-semibold tabular-nums">{c.total_points.toLocaleString()}</td>
-                      <td className="p-3 text-center"><TierBadge tier={c.loyalty_tier as LoyaltyTier} /></td>
+                      <td className="p-3 text-center"><TierBadge tier={c.tier as LoyaltyTier} /></td>
                       <td className="p-3 hidden lg:table-cell text-muted-foreground">{relativeTime(c.created_at)}</td>
                       <td className="p-3" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
@@ -376,7 +376,7 @@ export default function CustomersPage() {
                   <p className="text-xs text-muted-foreground">Points</p>
                 </div>
                 <div>
-                  <TierBadge tier={detailOpen.loyalty_tier as LoyaltyTier} />
+                  <TierBadge tier={detailOpen.tier as LoyaltyTier} />
                   <p className="text-xs text-muted-foreground mt-1">Tier</p>
                 </div>
                 <div>

@@ -149,10 +149,9 @@ function ActivityFeed({ transactions }: { transactions: PointTransaction[] }) {
             <div key={tx.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
               <div className="flex items-center gap-3">
                 <span className={`flex h-8 w-8 items-center justify-center rounded-full ${isPositive ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}>
-                  {tx.type === "earned" && <TrendingUp className="h-4 w-4" />}
-                  {tx.type === "redeemed" && <Gift className="h-4 w-4" />}
-                  {tx.type === "adjusted" && <Star className="h-4 w-4" />}
-                  {tx.type === "expired" && <Star className="h-4 w-4" />}
+                  {(tx.type === "referral_completed" || tx.type === "signup_bonus" || tx.type === "milestone_bonus") && <TrendingUp className="h-4 w-4" />}
+                  {tx.type === "redemption" && <Gift className="h-4 w-4" />}
+                  {tx.type === "manual_adjustment" && <Star className="h-4 w-4" />}
                 </span>
                 <div>
                   <p className="text-sm font-medium">{tx.description || tx.type}</p>
@@ -278,7 +277,7 @@ export default function CustomerDashboard() {
     const { data: txData } = await supabase
       .from("point_transactions")
       .select("*")
-      .eq("profile_id", user.id)
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(10);
 
@@ -288,13 +287,13 @@ export default function CustomerDashboard() {
     const { count: totalRef } = await supabase
       .from("referrals")
       .select("*", { count: "exact", head: true })
-      .eq("referrer_id", user.id);
+      .eq("submitted_by", user.id);
 
     const { count: completedRef } = await supabase
       .from("referrals")
       .select("*", { count: "exact", head: true })
-      .eq("referrer_id", user.id)
-      .eq("status", "won");
+      .eq("submitted_by", user.id)
+      .eq("status", "installation_complete");
 
     // Points earned this month
     const startOfMonth = new Date();
@@ -304,8 +303,8 @@ export default function CustomerDashboard() {
     const { data: monthTx } = await supabase
       .from("point_transactions")
       .select("amount")
-      .eq("profile_id", user.id)
-      .eq("type", "earned")
+      .eq("user_id", user.id)
+      .eq("type", "referral_completed")
       .gte("created_at", startOfMonth.toISOString());
 
     const pointsThisMonth = monthTx?.reduce((sum, t) => sum + t.amount, 0) ?? 0;
@@ -314,7 +313,7 @@ export default function CustomerDashboard() {
     const { count: redemptionCount } = await supabase
       .from("redemptions")
       .select("*", { count: "exact", head: true })
-      .eq("profile_id", user.id);
+      .eq("user_id", user.id);
 
     setStats({
       totalReferrals: totalRef ?? 0,

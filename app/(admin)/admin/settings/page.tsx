@@ -182,7 +182,7 @@ export default function SettingsPage() {
     fetchServices();
   }
 
-  const isFreePlan = company?.plan === "free";
+  const isFreePlan = company?.plan_tier === "free";
 
   return (
     <div className="space-y-6">

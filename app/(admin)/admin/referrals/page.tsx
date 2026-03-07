@@ -23,23 +23,23 @@ import { Search, MoreHorizontal } from "lucide-react";
 import type { ReferralStatus } from "@/lib/types";
 
 const STATUS_OPTIONS: { value: ReferralStatus; label: string; color: string }[] = [
-  { value: "pending", label: "Submitted", color: "bg-gray-100 text-gray-700" },
+  { value: "submitted", label: "Submitted", color: "bg-gray-100 text-gray-700" },
   { value: "contacted", label: "Contacted", color: "bg-blue-100 text-blue-700" },
-  { value: "quoted", label: "Quote Sent", color: "bg-orange-100 text-orange-700" },
-  { value: "won", label: "Complete", color: "bg-green-100 text-green-700" },
-  { value: "lost", label: "Cancelled", color: "bg-red-100 text-red-700" },
+  { value: "consultation_scheduled", label: "Consultation Scheduled", color: "bg-orange-100 text-orange-700" },
+  { value: "installation_complete", label: "Installation Complete", color: "bg-green-100 text-green-700" },
+  { value: "cancelled", label: "Cancelled", color: "bg-red-100 text-red-700" },
 ];
 
 interface ReferralRow {
   id: string;
-  referee_name: string;
-  referee_email: string | null;
-  referee_phone: string | null;
+  referral_name: string;
+  referral_email: string | null;
+  referral_phone: string | null;
   status: ReferralStatus;
   created_at: string;
   points_awarded: number;
   referrer_name: string;
-  referrer_id: string;
+  submitted_by: string;
   service_id: string | null;
   service_name: string | null;
 }
@@ -63,7 +63,7 @@ function ReferralManagementInner() {
 
     let query = supabase
       .from("referrals")
-      .select("*, profiles!referrals_referrer_id_fkey(full_name), services(name)")
+      .select("*, profiles!referrals_submitted_by_fkey(full_name), services(name)")
       .eq("company_id", adminProfile.company_id)
       .order("created_at", { ascending: false });
 
@@ -71,7 +71,7 @@ function ReferralManagementInner() {
       query = query.eq("status", statusFilter);
     }
     if (search) {
-      query = query.or(`referee_name.ilike.%${search}%,referee_email.ilike.%${search}%`);
+      query = query.or(`referral_name.ilike.%${search}%,referral_email.ilike.%${search}%`);
     }
 
     const { data } = await query;
@@ -79,14 +79,14 @@ function ReferralManagementInner() {
       const svc = r.services as unknown as { name: string } | null;
       return {
         id: r.id,
-        referee_name: r.referee_name,
-        referee_email: r.referee_email,
-        referee_phone: r.referee_phone,
+        referral_name: r.referral_name,
+        referral_email: r.referral_email,
+        referral_phone: r.referral_phone,
         status: r.status as ReferralStatus,
         created_at: r.created_at,
         points_awarded: r.points_awarded,
         referrer_name: (r.profiles as { full_name: string } | null)?.full_name ?? "Unknown",
-        referrer_id: r.referrer_id,
+        submitted_by: r.submitted_by,
         service_id: r.service_id ?? null,
         service_name: svc?.name ?? null,
       };
@@ -95,8 +95,8 @@ function ReferralManagementInner() {
 
     // Stats
     const { count: totalC } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", adminProfile.company_id);
-    const { count: pendingC } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", adminProfile.company_id).eq("status", "pending");
-    const { count: compC } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", adminProfile.company_id).eq("status", "won");
+    const { count: pendingC } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", adminProfile.company_id).eq("status", "submitted");
+    const { count: compC } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", adminProfile.company_id).eq("status", "installation_complete");
     const t = totalC ?? 0;
     const c = compC ?? 0;
     setStats({ total: t, pending: pendingC ?? 0, completed: c, rate: t > 0 ? Math.round((c / t) * 100) : 0 });
@@ -108,7 +108,7 @@ function ReferralManagementInner() {
   async function changeStatus(referralId: string, newStatus: ReferralStatus) {
     const supabase = createClient();
 
-    if (newStatus === "won") {
+    if (newStatus === "installation_complete") {
       await awardReferralCompletion(referralId, supabase);
       import("canvas-confetti").then(mod => {
         mod.default({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#14b8a6", "#f59e0b", "#8b5cf6"] });
@@ -122,10 +122,10 @@ function ReferralManagementInner() {
       if (ref) {
         const statusLabel = STATUS_OPTIONS.find(s => s.value === newStatus)?.label ?? newStatus;
         await supabase.from("notifications").insert({
-          profile_id: ref.referrer_id,
+          user_id: ref.submitted_by,
           type: "referral_update",
           title: "Referral Status Updated",
-          body: `Your referral for ${ref.referee_name} is now: ${statusLabel}`,
+          body: `Your referral for ${ref.referral_name} is now: ${statusLabel}`,
         });
       }
       toast.success("Status updated.");
@@ -241,12 +241,12 @@ function ReferralManagementInner() {
                           onChange={() => toggleSelect(r.id)} />
                       </td>
                       <td className="p-3">
-                        <p className="font-medium">{r.referee_name}</p>
-                        {r.referee_email && <p className="text-xs text-muted-foreground">{r.referee_email}</p>}
+                        <p className="font-medium">{r.referral_name}</p>
+                        {r.referral_email && <p className="text-xs text-muted-foreground">{r.referral_email}</p>}
                       </td>
                       <td className="p-3 hidden md:table-cell text-muted-foreground">{r.referrer_name}</td>
                       <td className="p-3 hidden lg:table-cell text-muted-foreground">{r.service_name || "—"}</td>
-                      <td className="p-3 hidden lg:table-cell text-muted-foreground">{r.referee_phone || "—"}</td>
+                      <td className="p-3 hidden lg:table-cell text-muted-foreground">{r.referral_phone || "—"}</td>
                       <td className="p-3 text-muted-foreground">{relativeTime(r.created_at)}</td>
                       <td className="p-3">
                         <Select value={r.status} onValueChange={(v) => changeStatus(r.id, v as ReferralStatus)}>
@@ -264,7 +264,7 @@ function ReferralManagementInner() {
                             <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => changeStatus(r.id, "lost")}>Cancel Referral</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => changeStatus(r.id, "cancelled")}>Cancel Referral</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>

@@ -67,17 +67,20 @@ export async function awardReferralCompletion(
   // 1. Get referral
   const { data: referral } = await supabase
     .from("referrals")
-    .select("*, profiles!referrals_referrer_id_fkey(id, total_points, company_id)")
+    .select("*")
     .eq("id", referralId)
     .single();
 
   if (!referral) return;
 
-  const profile = (referral as Record<string, unknown>).profiles as {
-    id: string;
-    total_points: number;
-    company_id: string;
-  };
+  // 2. Get the submitter's profile
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, total_points, company_id")
+    .eq("id", referral.submitted_by)
+    .single();
+
+  if (!profile) return;
 
   // 2. Get company settings
   const { data: company } = await supabase
@@ -103,12 +106,12 @@ export async function awardReferralCompletion(
 
   // 3. Award base points
   await supabase.from("point_transactions").insert({
-    profile_id: profile.id,
+    user_id: profile.id,
     company_id: referral.company_id,
-    type: "earned",
+    type: "referral_completed",
     amount: basePoints,
-    description: `Referral completed: ${referral.referee_name}`,
-    referral_id: referralId,
+    description: `Referral completed: ${referral.referral_name}`,
+    reference_id: referralId,
   });
 
   let totalAwarded = basePoints;
@@ -117,21 +120,21 @@ export async function awardReferralCompletion(
   const { count: completedCount } = await supabase
     .from("referrals")
     .select("*", { count: "exact", head: true })
-    .eq("referrer_id", profile.id)
-    .eq("status", "won");
+    .eq("submitted_by", profile.id)
+    .eq("status", "installation_complete");
 
   if (completedCount && milestoneThreshold > 0 && completedCount % milestoneThreshold === 0) {
     await supabase.from("point_transactions").insert({
-      profile_id: profile.id,
+      user_id: profile.id,
       company_id: referral.company_id,
-      type: "earned",
+      type: "milestone_bonus",
       amount: milestoneBonus,
       description: `Milestone bonus: ${completedCount} completed referrals!`,
     });
     totalAwarded += milestoneBonus;
 
     await supabase.from("notifications").insert({
-      profile_id: profile.id,
+      user_id: profile.id,
       type: "achievement",
       title: "Milestone Bonus!",
       body: `You've completed ${completedCount} referrals! +${milestoneBonus} bonus points.`,
@@ -144,21 +147,21 @@ export async function awardReferralCompletion(
 
   await supabase
     .from("profiles")
-    .update({ total_points: newTotal, loyalty_tier: newTier })
+    .update({ total_points: newTotal, tier: newTier })
     .eq("id", profile.id);
 
   // 6. Update referral points_awarded
   await supabase
     .from("referrals")
-    .update({ points_awarded: basePoints, status: "won" })
+    .update({ points_awarded: basePoints, status: "installation_complete" })
     .eq("id", referralId);
 
   // 7. Create notification
   await supabase.from("notifications").insert({
-    profile_id: profile.id,
+    user_id: profile.id,
     type: "referral_update",
     title: "Referral Complete!",
-    body: `Your referral for ${referral.referee_name}'s installation is complete! +${basePoints} points earned.`,
+    body: `Your referral for ${referral.referral_name}'s installation is complete! +${basePoints} points earned.`,
   });
 }
 
@@ -172,9 +175,9 @@ export async function manualPointAdjustment(
 ) {
   // 1. Insert point_transaction
   await supabase.from("point_transactions").insert({
-    profile_id: userId,
+    user_id: userId,
     company_id: companyId,
-    type: "adjusted",
+    type: "manual_adjustment",
     amount,
     description: reason || "Manual adjustment",
   });
@@ -193,12 +196,12 @@ export async function manualPointAdjustment(
 
   await supabase
     .from("profiles")
-    .update({ total_points: newTotal, loyalty_tier: newTier })
+    .update({ total_points: newTotal, tier: newTier })
     .eq("id", userId);
 
   // 3. Notify customer
   await supabase.from("notifications").insert({
-    profile_id: userId,
+    user_id: userId,
     type: "reward_earned",
     title: amount > 0 ? "Points Awarded" : "Points Adjusted",
     body: `${amount > 0 ? "+" : ""}${amount} points: ${reason || "Manual adjustment"}`,
@@ -228,9 +231,9 @@ export async function awardReviewPoints(
   const reviewPts = getSettingValue(settings, "review_points", 25);
 
   await supabase.from("point_transactions").insert({
-    profile_id: review.profile_id,
+    user_id: review.user_id,
     company_id: review.company_id,
-    type: "earned",
+    type: "manual_adjustment",
     amount: reviewPts,
     description: "Review verified",
   });
@@ -239,7 +242,7 @@ export async function awardReviewPoints(
   const { data: profile } = await supabase
     .from("profiles")
     .select("total_points")
-    .eq("id", review.profile_id)
+    .eq("id", review.user_id)
     .single();
 
   if (profile) {
@@ -248,13 +251,13 @@ export async function awardReviewPoints(
       .from("profiles")
       .update({
         total_points: newTotal,
-        loyalty_tier: calculateTierFromPoints(newTotal),
+        tier: calculateTierFromPoints(newTotal),
       })
-      .eq("id", review.profile_id);
+      .eq("id", review.user_id);
   }
 
   await supabase.from("notifications").insert({
-    profile_id: review.profile_id,
+    user_id: review.user_id,
     type: "reward_earned",
     title: "Review Verified!",
     body: `Your review has been verified. +${reviewPts} points earned!`,

@@ -3,6 +3,7 @@
 import { Sidebar, type NavItem } from "@/components/shared/Sidebar";
 import { Header } from "@/components/shared/Header";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
+import { DemoModeBanner } from "@/components/shared/DemoModeBanner";
 import { useProfile } from "@/hooks/useProfile";
 
 const superAdminNav: NavItem[] = [
@@ -34,6 +35,13 @@ const superAdminNav: NavItem[] = [
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg>
     ),
   },
+  {
+    label: "System Test",
+    href: "/super-admin/system-test",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    ),
+  },
 ];
 
 export default function SuperAdminLayout({
@@ -44,18 +52,21 @@ export default function SuperAdminLayout({
   const { profile } = useProfile();
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar navItems={superAdminNav} brandLabel="CR Admin" />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header
-          fullName={profile?.full_name}
-          email={profile?.email}
-          totalPoints={profile?.total_points}
-          avatarUrl={profile?.avatar_url}
-        />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+    <div className="flex flex-col h-screen overflow-hidden">
+      <DemoModeBanner />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar navItems={superAdminNav} brandLabel="CR Admin" />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header
+            fullName={profile?.full_name}
+            email={profile?.email}
+            totalPoints={profile?.total_points}
+            avatarUrl={profile?.avatar_url}
+          />
+          <main className="flex-1 overflow-y-auto p-4 md:p-6">
             <ErrorBoundary>{children}</ErrorBoundary>
           </main>
+        </div>
       </div>
     </div>
   );

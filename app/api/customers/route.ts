@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
   if (
     !callerProfile?.company_id ||
-    !["contractor", "super_admin"].includes(callerProfile.role)
+    !["contractor", "contractor_owner", "super_admin"].includes(callerProfile.role)
   ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -81,11 +81,11 @@ export async function POST(request: NextRequest) {
   // 4. Check plan limits
   const { data: company } = await supabase
     .from("companies")
-    .select("plan")
+    .select("plan_tier")
     .eq("id", companyId)
     .single();
 
-  const plan: PlanTier = company?.plan ?? "free";
+  const plan: PlanTier = company?.plan_tier ?? "free";
 
   const { count: currentCustomers } = await supabase
     .from("profiles")

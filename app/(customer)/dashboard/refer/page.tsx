@@ -175,7 +175,7 @@ export default function SubmitReferralPage() {
       .from("referrals")
       .select("*", { count: "exact", head: true })
       .eq("company_id", profile.company_id!)
-      .eq("referee_email", form.email.trim().toLowerCase());
+      .eq("referral_email", form.email.trim().toLowerCase());
 
     if (emailDup && emailDup > 0) {
       setErrors({ email: "This person has already been referred" });
@@ -190,7 +190,7 @@ export default function SubmitReferralPage() {
     const { count: todayCount } = await supabase
       .from("referrals")
       .select("*", { count: "exact", head: true })
-      .eq("referrer_id", profile.id)
+      .eq("submitted_by", profile.id)
       .gte("created_at", todayStart.toISOString());
 
     if (todayCount && todayCount >= 10) {
@@ -202,13 +202,13 @@ export default function SubmitReferralPage() {
     // Insert referral
     const { error } = await supabase.from("referrals").insert({
       company_id: profile.company_id!,
-      referrer_id: profile.id,
-      referee_name: form.fullName,
-      referee_email: form.email,
-      referee_phone: form.phone,
+      submitted_by: profile.id,
+      referral_name: form.fullName,
+      referral_email: form.email,
+      referral_phone: form.phone,
       service_type: form.relationship,
       service_id: form.serviceId || null,
-      status: "pending",
+      status: "submitted",
       notes: `Address: ${form.streetAddress}, ${form.city}, ${form.state} ${form.zipCode}\nRelationship: ${form.relationship}\n${form.notes}`.trim(),
     });
 

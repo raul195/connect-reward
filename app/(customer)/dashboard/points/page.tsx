@@ -9,10 +9,11 @@ import { TrendingUp, Gift, Star, AlertCircle } from "lucide-react";
 import type { PointTransaction, PointTxType } from "@/lib/types";
 
 const TYPE_CONFIG: Record<PointTxType, { label: string; icon: React.ElementType; color: string }> = {
-  earned: { label: "Earned", icon: TrendingUp, color: "text-green-600 bg-green-100" },
-  redeemed: { label: "Redeemed", icon: Gift, color: "text-red-600 bg-red-100" },
-  adjusted: { label: "Adjusted", icon: Star, color: "text-blue-600 bg-blue-100" },
-  expired: { label: "Expired", icon: AlertCircle, color: "text-gray-600 bg-gray-100" },
+  referral_completed: { label: "Referral Completed", icon: TrendingUp, color: "text-green-600 bg-green-100" },
+  redemption: { label: "Redeemed", icon: Gift, color: "text-red-600 bg-red-100" },
+  signup_bonus: { label: "Signup Bonus", icon: Star, color: "text-blue-600 bg-blue-100" },
+  manual_adjustment: { label: "Adjustment", icon: AlertCircle, color: "text-gray-600 bg-gray-100" },
+  milestone_bonus: { label: "Milestone Bonus", icon: Star, color: "text-amber-600 bg-amber-100" },
 };
 
 export default function PointsHistoryPage() {
@@ -27,7 +28,7 @@ export default function PointsHistoryPage() {
     const { data } = await supabase
       .from("point_transactions")
       .select("*")
-      .eq("profile_id", user.id)
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     if (data) setTransactions(data as PointTransaction[]);

@@ -28,6 +28,7 @@ const TEAM_LIMITS: Record<string, number> = { free: 1, starter: 3, growth: 10, p
 
 const ROLE_BADGES: Record<string, { label: string; color: string }> = {
   contractor: { label: "Owner", color: "bg-amber-100 text-amber-700" },
+  contractor_owner: { label: "Owner", color: "bg-amber-100 text-amber-700" },
   manager: { label: "Manager", color: "bg-blue-100 text-blue-700" },
   rep: { label: "Rep", color: "bg-gray-100 text-gray-700" },
 };
@@ -43,14 +44,14 @@ export default function TeamPage() {
   const [invitePhone, setInvitePhone] = useState("");
   const [inviteRole, setInviteRole] = useState("rep");
 
-  const teamLimit = TEAM_LIMITS[company?.plan ?? "free"] ?? 1;
+  const teamLimit = TEAM_LIMITS[company?.plan_tier ?? "free"] ?? 1;
 
   const fetchMembers = useCallback(async () => {
     if (!adminProfile?.company_id) return;
     const supabase = createClient();
     const { data } = await supabase.from("profiles").select("*")
       .eq("company_id", adminProfile.company_id)
-      .in("role", ["contractor", "super_admin"])
+      .in("role", ["contractor", "contractor_owner", "super_admin"])
       .order("created_at", { ascending: true });
     // For now, all contractors are team members
     if (data) setMembers(data as Profile[]);
@@ -87,7 +88,7 @@ export default function TeamPage() {
     setInviteRole("rep");
   }
 
-  const isFreePlan = company?.plan === "free";
+  const isFreePlan = company?.plan_tier === "free";
   const atLimit = members.length >= teamLimit;
 
   return (

@@ -21,6 +21,7 @@ const PAGE_SIZE = 20;
 const ROLE_COLORS: Record<string, string> = {
   customer: "bg-green-100 text-green-700",
   contractor: "bg-blue-100 text-blue-700",
+  contractor_owner: "bg-blue-100 text-blue-700",
   super_admin: "bg-red-100 text-red-700",
 };
 
@@ -88,6 +89,7 @@ export default function UsersPage() {
             <SelectItem value="all">All Roles</SelectItem>
             <SelectItem value="customer">Customer</SelectItem>
             <SelectItem value="contractor">Contractor</SelectItem>
+            <SelectItem value="contractor_owner">Contractor Owner</SelectItem>
             <SelectItem value="super_admin">Super Admin</SelectItem>
           </SelectContent>
         </Select>
@@ -124,7 +126,7 @@ export default function UsersPage() {
                     </td>
                     <td className="p-3 hidden sm:table-cell text-muted-foreground">{u.company_name}</td>
                     <td className="p-3 hidden md:table-cell">
-                      <Badge className={`${TIER_COLORS[u.loyalty_tier] || TIER_COLORS.bronze} border-0 text-xs`}>{u.loyalty_tier}</Badge>
+                      <Badge className={`${TIER_COLORS[u.tier] || TIER_COLORS.bronze} border-0 text-xs`}>{u.tier}</Badge>
                     </td>
                     <td className="p-3 hidden md:table-cell font-medium">{u.total_points.toLocaleString()}</td>
                     <td className="p-3 hidden lg:table-cell text-muted-foreground text-xs">{relativeTime(u.created_at)}</td>
@@ -157,7 +159,7 @@ export default function UsersPage() {
                 <p><strong>Phone:</strong> {detail.phone || "—"}</p>
                 <p><strong>Role:</strong> {detail.role}</p>
                 <p><strong>Company:</strong> {detail.company_name}</p>
-                <p><strong>Tier:</strong> {detail.loyalty_tier}</p>
+                <p><strong>Tier:</strong> {detail.tier}</p>
                 <p><strong>Points:</strong> {detail.total_points.toLocaleString()}</p>
                 <p><strong>Joined:</strong> {new Date(detail.created_at).toLocaleString()}</p>
               </div>

@@ -57,20 +57,20 @@ export default function ProfilePage() {
     const { count: totalRef } = await supabase
       .from("referrals")
       .select("*", { count: "exact", head: true })
-      .eq("referrer_id", user.id);
+      .eq("submitted_by", user.id);
 
     const { count: completedRef } = await supabase
       .from("referrals")
       .select("*", { count: "exact", head: true })
-      .eq("referrer_id", user.id)
-      .eq("status", "won");
+      .eq("submitted_by", user.id)
+      .eq("status", "installation_complete");
 
     // Points redeemed
     const { data: redeemedTx } = await supabase
       .from("point_transactions")
       .select("amount")
-      .eq("profile_id", user.id)
-      .eq("type", "redeemed");
+      .eq("user_id", user.id)
+      .eq("type", "redemption");
 
     const totalRedeemed = Math.abs(redeemedTx?.reduce((sum, t) => sum + t.amount, 0) ?? 0);
 

@@ -44,7 +44,7 @@ export default function CompaniesPage() {
       .order("created_at", { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-    if (filterPlan !== "all") query = query.eq("plan", filterPlan);
+    if (filterPlan !== "all") query = query.eq("plan_tier", filterPlan);
     if (search.trim()) query = query.ilike("name", `%${search.trim()}%`);
 
     const { data, count } = await query;
@@ -64,10 +64,10 @@ export default function CompaniesPage() {
 
   useEffect(() => { fetchCompanies(); }, [fetchCompanies]);
 
-  async function updatePlan(id: string, plan: PlanTier) {
+  async function updatePlan(id: string, plan_tier: PlanTier) {
     const supabase = createClient();
-    await supabase.from("companies").update({ plan }).eq("id", id);
-    setCompanies(prev => prev.map(c => c.id === id ? { ...c, plan } : c));
+    await supabase.from("companies").update({ plan_tier }).eq("id", id);
+    setCompanies(prev => prev.map(c => c.id === id ? { ...c, plan_tier } : c));
     toast.success("Plan updated.");
   }
 
@@ -123,9 +123,9 @@ export default function CompaniesPage() {
                     <td className="p-3 font-medium">{c.name}</td>
                     <td className="p-3 text-muted-foreground">{c.slug}</td>
                     <td className="p-3" onClick={e => e.stopPropagation()}>
-                      <Select value={c.plan} onValueChange={v => updatePlan(c.id, v as PlanTier)}>
+                      <Select value={c.plan_tier} onValueChange={v => updatePlan(c.id, v as PlanTier)}>
                         <SelectTrigger className="h-7 text-xs w-[100px]">
-                          <Badge className={`${PLAN_COLORS[c.plan]} border-0 text-xs`}>{c.plan}</Badge>
+                          <Badge className={`${PLAN_COLORS[c.plan_tier]} border-0 text-xs`}>{c.plan_tier}</Badge>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="free">Free</SelectItem>
@@ -164,7 +164,7 @@ export default function CompaniesPage() {
               <div className="space-y-2 text-sm">
                 <p><strong>ID:</strong> {detail.id}</p>
                 <p><strong>Slug:</strong> {detail.slug}</p>
-                <p><strong>Plan:</strong> {detail.plan}</p>
+                <p><strong>Plan:</strong> {detail.plan_tier}</p>
                 <p><strong>Created:</strong> {new Date(detail.created_at).toLocaleString()}</p>
               </div>
             </>

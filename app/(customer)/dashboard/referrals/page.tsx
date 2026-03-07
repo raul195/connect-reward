@@ -19,27 +19,26 @@ import type { Referral, ReferralStatus, Service } from "@/lib/types";
 
 // ── Status badge config ──────────────────────────
 const STATUS_CONFIG: Record<ReferralStatus, { label: string; className: string }> = {
-  pending: { label: "Submitted", className: "bg-gray-100 text-gray-700" },
+  submitted: { label: "Submitted", className: "bg-gray-100 text-gray-700" },
   contacted: { label: "Contacted", className: "bg-blue-100 text-blue-700" },
-  quoted: { label: "Quote Sent", className: "bg-orange-100 text-orange-700" },
-  won: { label: "Installation Complete", className: "bg-green-100 text-green-700" },
-  lost: { label: "Cancelled", className: "bg-red-100 text-red-700" },
-  expired: { label: "Expired", className: "bg-gray-100 text-gray-500" },
+  consultation_scheduled: { label: "Consultation Scheduled", className: "bg-purple-100 text-purple-700" },
+  installation_complete: { label: "Installation Complete", className: "bg-green-100 text-green-700" },
+  cancelled: { label: "Cancelled", className: "bg-red-100 text-red-700" },
 };
 
 // ── Pipeline steps ───────────────────────────────
-const PIPELINE_STEPS = ["pending", "contacted", "quoted", "won"] as const;
-const PIPELINE_LABELS = ["Submitted", "Contacted", "Consultation", "Quote Sent", "Complete"];
+const PIPELINE_STEPS = ["submitted", "contacted", "consultation_scheduled", "installation_complete"] as const;
+const PIPELINE_LABELS = ["Submitted", "Contacted", "Consultation", "Installation Complete"];
 
 function PipelineTracker({ status }: { status: ReferralStatus }) {
-  const isCancelled = status === "lost" || status === "expired";
+  const isCancelled = status === "cancelled";
 
   // Map status to step index
   let currentIdx: number;
-  if (status === "pending") currentIdx = 0;
+  if (status === "submitted") currentIdx = 0;
   else if (status === "contacted") currentIdx = 1;
-  else if (status === "quoted") currentIdx = 3;
-  else if (status === "won") currentIdx = 4;
+  else if (status === "consultation_scheduled") currentIdx = 2;
+  else if (status === "installation_complete") currentIdx = 3;
   else currentIdx = -1; // cancelled
 
   return (
@@ -80,11 +79,11 @@ function ReferralCard({ referral, serviceName }: { referral: Referral; serviceNa
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <h3 className="font-bold text-lg">{referral.referee_name}</h3>
+            <h3 className="font-bold text-lg">{referral.referral_name}</h3>
             <p className="text-sm text-muted-foreground">{relativeTime(referral.created_at)}</p>
           </div>
           <Badge className={`${cfg.className} border-0 font-semibold`}>
-            {referral.status === "won" && "✅ "}{cfg.label}
+            {referral.status === "installation_complete" && "✅ "}{cfg.label}
           </Badge>
         </div>
 
@@ -92,17 +91,17 @@ function ReferralCard({ referral, serviceName }: { referral: Referral; serviceNa
           {serviceName && (
             <Badge variant="outline" className="text-xs">{serviceName}</Badge>
           )}
-          {referral.service_type && !serviceName && (
-            <Badge variant="outline" className="text-xs">{referral.service_type}</Badge>
+          {referral.service_id && !serviceName && (
+            <Badge variant="outline" className="text-xs">{referral.service_id}</Badge>
           )}
         </div>
 
         <PipelineTracker status={referral.status} />
 
         <div className="mt-3 text-sm">
-          {referral.status === "won" ? (
+          {referral.status === "installation_complete" ? (
             <p className="font-semibold text-green-600">{referral.points_awarded.toLocaleString()} pts earned!</p>
-          ) : referral.status === "lost" || referral.status === "expired" ? (
+          ) : referral.status === "cancelled" ? (
             <p className="text-muted-foreground italic">No points earned</p>
           ) : (
             <p className="text-muted-foreground">Points: Pending</p>
@@ -153,7 +152,7 @@ export default function MyReferralsPage() {
     const { data } = await supabase
       .from("referrals")
       .select("*")
-      .eq("referrer_id", user.id)
+      .eq("submitted_by", user.id)
       .order("created_at", { ascending: false });
 
     if (data) setReferrals(data as Referral[]);

@@ -32,7 +32,7 @@ export default function ReportsPage() {
   const [topReferrers, setTopReferrers] = useState<{ name: string; count: number }[]>([]);
   const [topRewards, setTopRewards] = useState<{ name: string; count: number }[]>([]);
 
-  const canExport = company?.plan === "growth" || company?.plan === "pro";
+  const canExport = company?.plan_tier === "growth" || company?.plan_tier === "pro";
 
   const getStartDate = useCallback((): Date => {
     const now = new Date();
@@ -55,9 +55,9 @@ export default function ReportsPage() {
 
     // Metrics
     const { count: totalRef } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", cid).gte("created_at", since);
-    const { count: completed } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", cid).eq("status", "won").gte("created_at", since);
-    const { data: earnedTx } = await supabase.from("point_transactions").select("amount").eq("company_id", cid).eq("type", "earned").gte("created_at", since);
-    const { data: redeemedTx } = await supabase.from("point_transactions").select("amount").eq("company_id", cid).eq("type", "redeemed").gte("created_at", since);
+    const { count: completed } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", cid).eq("status", "installation_complete").gte("created_at", since);
+    const { data: earnedTx } = await supabase.from("point_transactions").select("amount").eq("company_id", cid).eq("type", "referral_completed").gte("created_at", since);
+    const { data: redeemedTx } = await supabase.from("point_transactions").select("amount").eq("company_id", cid).eq("type", "redemption").gte("created_at", since);
     const { count: activeCust } = await supabase.from("profiles").select("*", { count: "exact", head: true }).eq("company_id", cid).eq("role", "customer");
 
     const ptsDist = earnedTx?.reduce((s, t) => s + t.amount, 0) ?? 0;
@@ -68,11 +68,11 @@ export default function ReportsPage() {
     setMetrics({ totalRef: t, completed: c, rate: t > 0 ? Math.round((c / t) * 100) : 0, ptsDist, ptsRedeemed, activeCust: activeCust ?? 0 });
 
     // Funnel
-    const statuses = ["pending", "contacted", "quoted", "won"] as const;
+    const statuses = ["submitted", "contacted", "consultation_scheduled", "installation_complete"] as const;
     const funnelData: { stage: string; count: number }[] = [];
     for (const s of statuses) {
       const { count: sc } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", cid).eq("status", s);
-      const labels: Record<string, string> = { pending: "Submitted", contacted: "Contacted", quoted: "Quote Sent", won: "Complete" };
+      const labels: Record<string, string> = { submitted: "Submitted", contacted: "Contacted", consultation_scheduled: "Consultation Scheduled", installation_complete: "Installation Complete" };
       funnelData.push({ stage: labels[s], count: sc ?? 0 });
     }
     setFunnel(funnelData);
@@ -86,20 +86,20 @@ export default function ReportsPage() {
       if (!timeMap.has(key)) timeMap.set(key, { submitted: 0, completed: 0 });
       const entry = timeMap.get(key)!;
       entry.submitted++;
-      if (r.status === "won") entry.completed++;
+      if (r.status === "installation_complete") entry.completed++;
     }
     setRefOverTime([...timeMap.entries()].map(([date, v]) => ({ date, ...v })));
 
     // Top referrers
-    const { data: refProfiles } = await supabase.from("referrals").select("referrer_id, profiles!referrals_referrer_id_fkey(full_name)")
+    const { data: refProfiles } = await supabase.from("referrals").select("submitted_by, profiles!referrals_submitted_by_fkey(full_name)")
       .eq("company_id", cid).gte("created_at", since);
     const refMap = new Map<string, { name: string; count: number }>();
     for (const r of refProfiles ?? []) {
       const profiles = r.profiles as unknown as { full_name: string }[] | { full_name: string } | null;
       const name = Array.isArray(profiles) ? profiles[0]?.full_name ?? "Unknown" : profiles?.full_name ?? "Unknown";
-      const existing = refMap.get(r.referrer_id) ?? { name, count: 0 };
+      const existing = refMap.get(r.submitted_by) ?? { name, count: 0 };
       existing.count++;
-      refMap.set(r.referrer_id, existing);
+      refMap.set(r.submitted_by, existing);
     }
     setTopReferrers([...refMap.values()].sort((a, b) => b.count - a.count).slice(0, 10));
 

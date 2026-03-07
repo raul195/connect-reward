@@ -3,6 +3,7 @@
 import { Sidebar, type NavItem } from "@/components/shared/Sidebar";
 import { Header } from "@/components/shared/Header";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
+import { DemoModeBanner } from "@/components/shared/DemoModeBanner";
 import { useProfile } from "@/hooks/useProfile";
 
 const adminNav: NavItem[] = [
@@ -72,17 +73,20 @@ export default function AdminLayout({
   const { profile } = useProfile();
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar navItems={adminNav} brandLabel="Connect Reward" />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header
-          fullName={profile?.full_name}
-          email={profile?.email}
-          avatarUrl={profile?.avatar_url}
-        />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+    <div className="flex flex-col h-screen overflow-hidden">
+      <DemoModeBanner />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar navItems={adminNav} brandLabel="Connect Reward" />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <Header
+            fullName={profile?.full_name}
+            email={profile?.email}
+            avatarUrl={profile?.avatar_url}
+          />
+          <main className="flex-1 overflow-y-auto p-4 md:p-6">
             <ErrorBoundary>{children}</ErrorBoundary>
           </main>
+        </div>
       </div>
     </div>
   );

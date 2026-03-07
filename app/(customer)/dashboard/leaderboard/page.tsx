@@ -12,7 +12,7 @@ interface LeaderboardEntry {
   id: string;
   full_name: string;
   total_points: number;
-  loyalty_tier: LoyaltyTier;
+  tier: LoyaltyTier;
   referral_count: number;
 }
 
@@ -51,7 +51,7 @@ export default function LeaderboardPage() {
       // All-time: use profile total_points and count referrals
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, full_name, total_points, loyalty_tier")
+        .select("id, full_name, total_points, tier")
         .eq("company_id", profile.company_id)
         .eq("role", "customer")
         .order("total_points", { ascending: false })
@@ -65,13 +65,13 @@ export default function LeaderboardPage() {
         const { count } = await supabase
           .from("referrals")
           .select("*", { count: "exact", head: true })
-          .eq("referrer_id", p.id);
+          .eq("submitted_by", p.id);
 
         entries.push({
           id: p.id,
           full_name: p.full_name,
           total_points: p.total_points,
-          loyalty_tier: p.loyalty_tier as LoyaltyTier,
+          tier: p.tier as LoyaltyTier,
           referral_count: count ?? 0,
         });
       }
@@ -93,9 +93,9 @@ export default function LeaderboardPage() {
 
       const { data: txData } = await supabase
         .from("point_transactions")
-        .select("profile_id, amount")
+        .select("user_id, amount")
         .eq("company_id", profile.company_id)
-        .eq("type", "earned")
+        .eq("type", "referral_completed")
         .gte("created_at", since.toISOString());
 
       if (!txData) { setLoading(false); return; }
@@ -103,7 +103,7 @@ export default function LeaderboardPage() {
       // Aggregate by profile
       const agg = new Map<string, number>();
       for (const tx of txData) {
-        agg.set(tx.profile_id, (agg.get(tx.profile_id) ?? 0) + tx.amount);
+        agg.set(tx.user_id, (agg.get(tx.user_id) ?? 0) + tx.amount);
       }
 
       // Sort and take top 20
@@ -116,7 +116,7 @@ export default function LeaderboardPage() {
 
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, full_name, total_points, loyalty_tier")
+        .select("id, full_name, total_points, tier")
         .in("id", profileIds);
 
       const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
@@ -127,7 +127,7 @@ export default function LeaderboardPage() {
           id,
           full_name: p?.full_name ?? "Unknown",
           total_points: points,
-          loyalty_tier: (p?.loyalty_tier ?? "bronze") as LoyaltyTier,
+          tier: (p?.tier ?? "bronze") as LoyaltyTier,
           referral_count: 0,
         };
       });
@@ -200,7 +200,7 @@ export default function LeaderboardPage() {
                     <div className="col-span-2 text-right tabular-nums">{entry.referral_count}</div>
                     <div className="col-span-2 text-right font-semibold tabular-nums">{entry.total_points.toLocaleString()}</div>
                     <div className="col-span-2 flex justify-end">
-                      <TierBadge tier={entry.loyalty_tier} />
+                      <TierBadge tier={entry.tier} />
                     </div>
                   </div>
                 );

@@ -31,11 +31,11 @@ interface Metrics {
 }
 
 interface PipelineCounts {
-  pending: number;
+  submitted: number;
   contacted: number;
-  quoted: number;
-  won: number;
-  lost: number;
+  consultation_scheduled: number;
+  installation_complete: number;
+  cancelled: number;
 }
 
 interface ActivityItem {
@@ -50,7 +50,7 @@ export default function AdminDashboard() {
     activeCustomers: 0, referralsThisMonth: 0, referralsLastMonth: 0,
     pointsDistributed: 0, totalReferrals: 0, completedReferrals: 0,
   });
-  const [pipeline, setPipeline] = useState<PipelineCounts>({ pending: 0, contacted: 0, quoted: 0, won: 0, lost: 0 });
+  const [pipeline, setPipeline] = useState<PipelineCounts>({ submitted: 0, contacted: 0, consultation_scheduled: 0, installation_complete: 0, cancelled: 0 });
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -81,12 +81,12 @@ export default function AdminDashboard() {
 
     // Points distributed this month
     const { data: ptData } = await supabase.from("point_transactions").select("amount")
-      .eq("company_id", cid).eq("type", "earned").gte("created_at", som);
+      .eq("company_id", cid).eq("type", "referral_completed").gte("created_at", som);
     const ptsDist = ptData?.reduce((s, t) => s + t.amount, 0) ?? 0;
 
     // Total + completed referrals
     const { count: totalRef } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", cid);
-    const { count: compRef } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", cid).eq("status", "won");
+    const { count: compRef } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", cid).eq("status", "installation_complete");
 
     setMetrics({
       activeCustomers: custCount ?? 0,
@@ -98,8 +98,8 @@ export default function AdminDashboard() {
     });
 
     // Pipeline counts
-    const statuses = ["pending", "contacted", "quoted", "won", "lost"] as const;
-    const pipe: PipelineCounts = { pending: 0, contacted: 0, quoted: 0, won: 0, lost: 0 };
+    const statuses = ["submitted", "contacted", "consultation_scheduled", "installation_complete", "cancelled"] as const;
+    const pipe: PipelineCounts = { submitted: 0, contacted: 0, consultation_scheduled: 0, installation_complete: 0, cancelled: 0 };
     for (const s of statuses) {
       const { count } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", cid).eq("status", s);
       pipe[s] = count ?? 0;
@@ -107,15 +107,15 @@ export default function AdminDashboard() {
     setPipeline(pipe);
 
     // Recent activity (point_transactions as proxy)
-    const { data: recentTx } = await supabase.from("point_transactions").select("*, profiles!point_transactions_profile_id_fkey(full_name)")
+    const { data: recentTx } = await supabase.from("point_transactions").select("*, profiles!point_transactions_user_id_fkey(full_name)")
       .eq("company_id", cid).order("created_at", { ascending: false }).limit(20);
 
     const items: ActivityItem[] = (recentTx ?? []).map((tx) => {
       const name = (tx.profiles as { full_name: string } | null)?.full_name ?? "Customer";
       let icon: React.ReactNode = <Star className="h-4 w-4" />;
       let text = `${name}: ${tx.description || tx.type}`;
-      if (tx.type === "earned") icon = <Star className="h-4 w-4 text-amber-500" />;
-      if (tx.type === "redeemed") { icon = <Gift className="h-4 w-4 text-purple-500" />; }
+      if (tx.type === "referral_completed") icon = <Star className="h-4 w-4 text-amber-500" />;
+      if (tx.type === "redemption") { icon = <Gift className="h-4 w-4 text-purple-500" />; }
       return { id: tx.id, icon, text, time: relativeTime(tx.created_at) };
     });
     setActivity(items);
@@ -148,10 +148,10 @@ export default function AdminDashboard() {
   ];
 
   const pipeStages = [
-    { label: "Submitted", count: pipeline.pending, status: "pending" },
+    { label: "Submitted", count: pipeline.submitted, status: "submitted" },
     { label: "Contacted", count: pipeline.contacted, status: "contacted" },
-    { label: "Quote Sent", count: pipeline.quoted, status: "quoted" },
-    { label: "Complete", count: pipeline.won, status: "won" },
+    { label: "Consultation Scheduled", count: pipeline.consultation_scheduled, status: "consultation_scheduled" },
+    { label: "Complete", count: pipeline.installation_complete, status: "installation_complete" },
   ];
   const maxPipe = Math.max(...pipeStages.map(s => s.count), 1);
 
@@ -240,13 +240,13 @@ export default function AdminDashboard() {
                 </div>
               </Link>
             ))}
-            {pipeline.lost > 0 && (
+            {pipeline.cancelled > 0 && (
               <div className="flex items-center gap-3">
                 <span className="w-24 text-sm font-medium text-red-500">Cancelled</span>
                 <div className="flex-1 rounded-full bg-muted h-7 overflow-hidden">
                   <div className="h-full rounded-full bg-red-400 flex items-center px-3"
-                       style={{ width: `${Math.max((pipeline.lost / maxPipe) * 100, 8)}%` }}>
-                    <span className="text-xs font-bold text-white">{pipeline.lost}</span>
+                       style={{ width: `${Math.max((pipeline.cancelled / maxPipe) * 100, 8)}%` }}>
+                    <span className="text-xs font-bold text-white">{pipeline.cancelled}</span>
                   </div>
                 </div>
               </div>

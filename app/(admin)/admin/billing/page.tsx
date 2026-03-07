@@ -86,14 +86,14 @@ export default function BillingPage() {
     const { count: cc } = await supabase.from("profiles").select("*", { count: "exact", head: true })
       .eq("company_id", profile.company_id).eq("role", "customer");
     const { count: tc } = await supabase.from("profiles").select("*", { count: "exact", head: true })
-      .eq("company_id", profile.company_id).eq("role", "contractor");
+      .eq("company_id", profile.company_id).in("role", ["contractor", "contractor_owner"]);
     setCustomerCount(cc ?? 0);
     setTeamCount(tc ?? 0);
   }, [profile?.company_id]);
 
   useEffect(() => { fetchUsage(); }, [fetchUsage]);
 
-  const currentPlan = company?.plan ?? "free";
+  const currentPlan = company?.plan_tier ?? "free";
   const planInfo = PLANS[currentPlan];
   const currentIdx = PLAN_ORDER.indexOf(currentPlan);
 

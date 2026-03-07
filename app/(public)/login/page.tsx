@@ -55,7 +55,7 @@ function LoginForm() {
         .eq("id", user.id)
         .single();
 
-      if (profile?.role === "contractor") {
+      if (profile?.role === "contractor" || profile?.role === "contractor_owner") {
         router.push("/admin");
       } else if (profile?.role === "super_admin") {
         router.push("/super-admin");
