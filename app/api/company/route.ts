@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/api-helpers";
+import { isDemoAccount } from "@/lib/demo";
 
 export async function GET() {
   const result = await getAuthContext();
@@ -15,6 +16,11 @@ export async function GET() {
     .select("*")
     .eq("id", profile.company_id)
     .single();
+
+  // Demo accounts always get "pro" plan so all features are visible
+  if (company && isDemoAccount(profile.email)) {
+    company.plan_tier = "pro";
+  }
 
   return NextResponse.json({ company });
 }

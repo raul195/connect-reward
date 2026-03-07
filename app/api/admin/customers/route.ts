@@ -19,9 +19,9 @@ export async function GET(request: Request) {
     const tier = searchParams.get("tier") ?? "";
     const sortCol = searchParams.get("sort") ?? "total_points";
     const asc = searchParams.get("asc") === "true";
-    const page = parseInt(searchParams.get("page") ?? "1", 10);
+    const page = parseInt(searchParams.get("page") ?? "0", 10);
 
-    const from = (page - 1) * PAGE_SIZE;
+    const from = page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
     let query = admin

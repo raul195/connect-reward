@@ -44,7 +44,7 @@ export async function seedDemoData() {
     .insert({
       name: "Demo Solar Co",
       slug: DEMO_COMPANY_SLUG,
-      plan_tier: "free",
+      plan_tier: "pro",
       industry: "solar",
       settings: DEFAULT_SETTINGS,
     })

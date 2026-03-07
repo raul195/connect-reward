@@ -91,26 +91,43 @@ export async function GET(request: Request) {
 
     const metrics = { totalRef, completed, rate, ptsDist, ptsRedeemed, activeCust };
 
-    // Funnel data: count per status
+    // Funnel data: count per status with display labels
+    const statusLabels: Record<string, string> = {
+      submitted: "Submitted",
+      contacted: "Contacted",
+      consultation_scheduled: "Consultation Scheduled",
+      installation_complete: "Installation Complete",
+      cancelled: "Cancelled",
+    };
     const funnelMap: Record<string, number> = {};
     for (const r of referrals) {
       funnelMap[r.status] = (funnelMap[r.status] || 0) + 1;
     }
     const funnel = Object.entries(funnelMap).map(([status, count]) => ({
-      status,
+      stage: statusLabels[status] ?? status,
       count,
     }));
 
-    // Referrals over time (group by date key m/d)
-    const overTimeMap: Record<string, number> = {};
+    // Referrals over time (group by date key m/d, split by submitted vs completed)
+    const overTimeSubmitted: Record<string, number> = {};
+    const overTimeCompleted: Record<string, number> = {};
     for (const r of referrals) {
       const d = new Date(r.created_at);
       const key = `${d.getMonth() + 1}/${d.getDate()}`;
-      overTimeMap[key] = (overTimeMap[key] || 0) + 1;
+      overTimeSubmitted[key] = (overTimeSubmitted[key] || 0) + 1;
+      if (r.status === "installation_complete") {
+        overTimeCompleted[key] = (overTimeCompleted[key] || 0) + 1;
+      }
     }
-    const refOverTime = Object.entries(overTimeMap).map(([date, count]) => ({
+    const allDates = [...new Set([...Object.keys(overTimeSubmitted), ...Object.keys(overTimeCompleted)])].sort((a, b) => {
+      const [am, ad] = a.split("/").map(Number);
+      const [bm, bd] = b.split("/").map(Number);
+      return am !== bm ? am - bm : ad - bd;
+    });
+    const refOverTime = allDates.map((date) => ({
       date,
-      count,
+      submitted: overTimeSubmitted[date] ?? 0,
+      completed: overTimeCompleted[date] ?? 0,
     }));
 
     // Top referrers (group by submitted_by, get profile names)
