@@ -43,21 +43,17 @@ function LoginForm() {
       return;
     }
 
-    // Fetch profile to determine role-based redirect
+    // Use auth metadata for role-based redirect (avoids RLS recursion on profiles)
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (user) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
+      const role = user.user_metadata?.role as string | undefined;
 
-      if (profile?.role === "contractor" || profile?.role === "contractor_owner") {
+      if (role === "contractor" || role === "contractor_owner") {
         router.push("/admin");
-      } else if (profile?.role === "super_admin") {
+      } else if (role === "super_admin") {
         router.push("/super-admin");
       } else {
         router.push(redirect);
