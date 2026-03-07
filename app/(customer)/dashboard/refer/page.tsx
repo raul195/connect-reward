@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -99,14 +98,14 @@ export default function SubmitReferralPage() {
 
   const fetchServices = useCallback(async () => {
     if (!profile?.company_id) return;
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("services")
-      .select("*")
-      .eq("company_id", profile.company_id)
-      .eq("is_active", true)
-      .order("display_order", { ascending: true });
-    if (data) setServices(data as Service[]);
+    try {
+      const res = await fetch("/api/customer/dashboard");
+      if (!res.ok) throw new Error("Failed to fetch services");
+      const data = await res.json();
+      if (data.services) setServices(data.services as Service[]);
+    } catch {
+      // fetch error
+    }
   }, [profile?.company_id]);
 
   useEffect(() => { fetchServices(); }, [fetchServices]);
@@ -160,9 +159,7 @@ export default function SubmitReferralPage() {
     if (!profile) return;
     setSubmitting(true);
 
-    const supabase = createClient();
-
-    // Self-referral prevention
+    // Self-referral prevention (client-side check)
     if (form.email.trim().toLowerCase() === profile.email?.toLowerCase()) {
       setErrors({ email: "You cannot refer yourself" });
       setStep(1);
@@ -170,69 +167,56 @@ export default function SubmitReferralPage() {
       return;
     }
 
-    // Check duplicate email within same company
-    const { count: emailDup } = await supabase
-      .from("referrals")
-      .select("*", { count: "exact", head: true })
-      .eq("company_id", profile.company_id!)
-      .eq("referral_email", form.email.trim().toLowerCase());
+    try {
+      const res = await fetch("/api/customer/referrals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          referral_name: form.fullName,
+          referral_email: form.email,
+          referral_phone: form.phone,
+          service_id: form.serviceId || null,
+          relationship: form.relationship,
+          notes: `Address: ${form.streetAddress}, ${form.city}, ${form.state} ${form.zipCode}\nRelationship: ${form.relationship}\n${form.notes}`.trim(),
+        }),
+      });
 
-    if (emailDup && emailDup > 0) {
-      setErrors({ email: "This person has already been referred" });
-      setStep(1);
-      setSubmitting(false);
-      return;
-    }
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        const errMsg = errData.error || "Failed to submit referral. Please try again.";
 
-    // Rate limit: max 10 referrals per day
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const { count: todayCount } = await supabase
-      .from("referrals")
-      .select("*", { count: "exact", head: true })
-      .eq("submitted_by", profile.id)
-      .gte("created_at", todayStart.toISOString());
+        // Handle specific errors from API
+        if (errMsg.includes("already been referred")) {
+          setErrors({ email: "This person has already been referred" });
+          setStep(1);
+        } else if (errMsg.includes("daily referral limit") || errMsg.includes("rate limit")) {
+          toast.error("You've reached the daily referral limit (10). Try again tomorrow.");
+        } else {
+          toast.error(errMsg);
+        }
+        setSubmitting(false);
+        return;
+      }
 
-    if (todayCount && todayCount >= 10) {
-      toast.error("You've reached the daily referral limit (10). Try again tomorrow.");
-      setSubmitting(false);
-      return;
-    }
+      // Fire confetti (dynamic import to reduce bundle)
+      import("canvas-confetti").then(mod => {
+        mod.default({
+          particleCount: 100,
+          spread: 70,
+          origin: { x: 0.5, y: 0.5 },
+          colors: ["#14b8a6", "#f59e0b", "#8b5cf6", "#ef4444", "#3b82f6"],
+        });
+      });
 
-    // Insert referral
-    const { error } = await supabase.from("referrals").insert({
-      company_id: profile.company_id!,
-      submitted_by: profile.id,
-      referral_name: form.fullName,
-      referral_email: form.email,
-      referral_phone: form.phone,
-      service_type: form.relationship,
-      service_id: form.serviceId || null,
-      status: "submitted",
-      notes: `Address: ${form.streetAddress}, ${form.city}, ${form.state} ${form.zipCode}\nRelationship: ${form.relationship}\n${form.notes}`.trim(),
-    });
+      toast.success("Referral Submitted! We'll keep you updated on their progress.");
 
-    if (error) {
+      setTimeout(() => {
+        router.push("/dashboard/referrals");
+      }, 2000);
+    } catch {
       toast.error("Failed to submit referral. Please try again.");
       setSubmitting(false);
-      return;
     }
-
-    // Fire confetti (dynamic import to reduce bundle)
-    import("canvas-confetti").then(mod => {
-      mod.default({
-        particleCount: 100,
-        spread: 70,
-        origin: { x: 0.5, y: 0.5 },
-        colors: ["#14b8a6", "#f59e0b", "#8b5cf6", "#ef4444", "#3b82f6"],
-      });
-    });
-
-    toast.success("Referral Submitted! We'll keep you updated on their progress.");
-
-    setTimeout(() => {
-      router.push("/dashboard/referrals");
-    }, 2000);
   }
 
   return (

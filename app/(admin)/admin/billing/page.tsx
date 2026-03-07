@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useCompany } from "@/hooks/useCompany";
 import { toast } from "sonner";
@@ -82,13 +81,13 @@ export default function BillingPage() {
 
   const fetchUsage = useCallback(async () => {
     if (!profile?.company_id) return;
-    const supabase = createClient();
-    const { count: cc } = await supabase.from("profiles").select("*", { count: "exact", head: true })
-      .eq("company_id", profile.company_id).eq("role", "customer");
-    const { count: tc } = await supabase.from("profiles").select("*", { count: "exact", head: true })
-      .eq("company_id", profile.company_id).in("role", ["contractor", "contractor_owner"]);
-    setCustomerCount(cc ?? 0);
-    setTeamCount(tc ?? 0);
+    try {
+      const res = await fetch("/api/admin/billing");
+      if (!res.ok) throw new Error("Failed to fetch billing");
+      const data = await res.json();
+      setCustomerCount(data.customerCount ?? 0);
+      setTeamCount(data.teamCount ?? 0);
+    } catch { /* ignore */ }
   }, [profile?.company_id]);
 
   useEffect(() => { fetchUsage(); }, [fetchUsage]);

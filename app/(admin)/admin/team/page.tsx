@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useCompany } from "@/hooks/useCompany";
+import { isDemoAccount } from "@/lib/demo";
+import { sampleAdminTeam } from "@/lib/sample-data";
+import { SampleDataBanner } from "@/components/shared/SampleDataBanner";
 import { relativeTime } from "@/lib/relative-time";
 import { UpgradeCTA } from "@/components/shared/UpgradeCTA";
 import { toast } from "sonner";
@@ -45,18 +47,28 @@ export default function TeamPage() {
   const [inviteRole, setInviteRole] = useState("rep");
 
   const teamLimit = TEAM_LIMITS[company?.plan_tier ?? "free"] ?? 1;
+  const [useSample, setUseSample] = useState(false);
 
   const fetchMembers = useCallback(async () => {
     if (!adminProfile?.company_id) return;
-    const supabase = createClient();
-    const { data } = await supabase.from("profiles").select("*")
-      .eq("company_id", adminProfile.company_id)
-      .in("role", ["contractor", "contractor_owner", "super_admin"])
-      .order("created_at", { ascending: true });
-    // For now, all contractors are team members
-    if (data) setMembers(data as Profile[]);
+    try {
+      const res = await fetch("/api/admin/team");
+      if (!res.ok) throw new Error("Failed to fetch team");
+      const data = await res.json();
+
+      if (data.members.length <= 1 && !isDemoAccount(adminProfile.email)) {
+        setMembers(sampleAdminTeam.members as Profile[]);
+        setUseSample(true);
+      } else {
+        setMembers(data.members as Profile[]);
+        setUseSample(false);
+      }
+    } catch {
+      setMembers(sampleAdminTeam.members as Profile[]);
+      setUseSample(true);
+    }
     setLoading(false);
-  }, [adminProfile?.company_id]);
+  }, [adminProfile?.company_id, adminProfile?.email]);
 
   useEffect(() => { fetchMembers(); }, [fetchMembers]);
 
@@ -93,6 +105,7 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6">
+      {useSample && <SampleDataBanner />}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Team Management</h1>

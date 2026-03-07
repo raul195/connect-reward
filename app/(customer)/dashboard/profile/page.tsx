@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client"; // kept only for avatar storage upload
 import { getTierProgress, getPointsToNextTier, calculateTierFromPoints } from "@/lib/points";
 import { TierBadge } from "@/components/shared/TierBadge";
 import { toast } from "sonner";
@@ -33,53 +33,31 @@ export default function ProfilePage() {
   const [savingPrefs, setSavingPrefs] = useState(false);
 
   const fetchProfile = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const res = await fetch("/api/customer/profile");
+      if (!res.ok) throw new Error("Failed to fetch profile");
+      const data = await res.json();
 
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    if (data) {
-      const p = data as Profile;
-      setProfile(p);
-      setFullName(p.full_name);
-      setPhone(p.phone ?? "");
-      if (p.notification_preferences) {
-        setNotifPrefs(p.notification_preferences);
+      if (data.profile) {
+        const p = data.profile as Profile;
+        setProfile(p);
+        setFullName(p.full_name);
+        setPhone(p.phone ?? "");
+        if (p.notification_preferences) {
+          setNotifPrefs(p.notification_preferences);
+        }
       }
+
+      if (data.stats) {
+        setStats({
+          totalReferrals: data.stats.totalReferrals ?? 0,
+          completedReferrals: data.stats.completedReferrals ?? 0,
+          totalRedeemed: data.stats.totalRedeemed ?? 0,
+        });
+      }
+    } catch {
+      // fetch error
     }
-
-    // Referral stats
-    const { count: totalRef } = await supabase
-      .from("referrals")
-      .select("*", { count: "exact", head: true })
-      .eq("submitted_by", user.id);
-
-    const { count: completedRef } = await supabase
-      .from("referrals")
-      .select("*", { count: "exact", head: true })
-      .eq("submitted_by", user.id)
-      .eq("status", "installation_complete");
-
-    // Points redeemed
-    const { data: redeemedTx } = await supabase
-      .from("point_transactions")
-      .select("amount")
-      .eq("user_id", user.id)
-      .eq("type", "redemption");
-
-    const totalRedeemed = Math.abs(redeemedTx?.reduce((sum, t) => sum + t.amount, 0) ?? 0);
-
-    setStats({
-      totalReferrals: totalRef ?? 0,
-      completedReferrals: completedRef ?? 0,
-      totalRedeemed,
-    });
-
     setLoading(false);
   }, []);
 
@@ -91,17 +69,21 @@ export default function ProfilePage() {
     if (!profile) return;
     setSaving(true);
 
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("profiles")
-      .update({ full_name: fullName, phone: phone || null })
-      .eq("id", profile.id);
+    try {
+      const res = await fetch("/api/customer/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ full_name: fullName, phone: phone || null }),
+      });
 
-    if (error) {
+      if (!res.ok) {
+        toast.error("Failed to save profile.");
+      } else {
+        toast.success("Profile updated!");
+        setProfile({ ...profile, full_name: fullName, phone: phone || null });
+      }
+    } catch {
       toast.error("Failed to save profile.");
-    } else {
-      toast.success("Profile updated!");
-      setProfile({ ...profile, full_name: fullName, phone: phone || null });
     }
     setSaving(false);
   }
@@ -109,16 +91,21 @@ export default function ProfilePage() {
   async function handleSaveNotifPrefs() {
     if (!profile) return;
     setSavingPrefs(true);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("profiles")
-      .update({ notification_preferences: notifPrefs })
-      .eq("id", profile.id);
 
-    if (error) {
+    try {
+      const res = await fetch("/api/customer/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notification_preferences: notifPrefs }),
+      });
+
+      if (!res.ok) {
+        toast.error("Failed to save notification preferences.");
+      } else {
+        toast.success("Notification preferences updated!");
+      }
+    } catch {
       toast.error("Failed to save notification preferences.");
-    } else {
-      toast.success("Notification preferences updated!");
     }
     setSavingPrefs(false);
   }
@@ -142,10 +129,12 @@ export default function ProfilePage() {
 
     const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
 
-    await supabase
-      .from("profiles")
-      .update({ avatar_url: urlData.publicUrl })
-      .eq("id", profile.id);
+    // Update profile avatar_url via API
+    await fetch("/api/customer/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ avatar_url: urlData.publicUrl }),
+    });
 
     setProfile({ ...profile, avatar_url: urlData.publicUrl });
     toast.success("Avatar updated!");

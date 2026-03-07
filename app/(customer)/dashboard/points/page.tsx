@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { relativeTime } from "@/lib/relative-time";
+import { sampleCustomerPoints } from "@/lib/sample-data";
+import { SampleDataBanner } from "@/components/shared/SampleDataBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Gift, Star, AlertCircle } from "lucide-react";
@@ -19,19 +20,24 @@ const TYPE_CONFIG: Record<PointTxType, { label: string; icon: React.ElementType;
 export default function PointsHistoryPage() {
   const [transactions, setTransactions] = useState<PointTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [useSample, setUseSample] = useState(false);
 
   const fetchTransactions = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const res = await fetch("/api/customer/points");
+      if (!res.ok) throw new Error("Failed to fetch points");
+      const data = await res.json();
 
-    const { data } = await supabase
-      .from("point_transactions")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (data) setTransactions(data as PointTransaction[]);
+      const txs = (data.transactions ?? []) as PointTransaction[];
+      if (txs.length === 0) {
+        setTransactions(sampleCustomerPoints.transactions as unknown as PointTransaction[]);
+        setUseSample(true);
+      } else {
+        setTransactions(txs);
+      }
+    } catch {
+      // fetch error
+    }
     setLoading(false);
   }, []);
 
@@ -53,6 +59,7 @@ export default function PointsHistoryPage() {
 
   return (
     <div className="space-y-6">
+      {useSample && <SampleDataBanner />}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Points History</h1>
         <p className="text-muted-foreground">{transactions.length} transactions</p>

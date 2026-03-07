@@ -2,8 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { relativeTime } from "@/lib/relative-time";
+import { useProfile } from "@/hooks/useProfile";
+import { isDemoAccount } from "@/lib/demo";
+import { sampleCustomerReferrals } from "@/lib/sample-data";
+import { SampleDataBanner } from "@/components/shared/SampleDataBanner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Send, UserPlus } from "lucide-react";
-import type { Referral, ReferralStatus, Service } from "@/lib/types";
+import type { Referral, ReferralStatus } from "@/lib/types";
 
 // ── Status badge config ──────────────────────────
 const STATUS_CONFIG: Record<ReferralStatus, { label: string; className: string }> = {
@@ -132,46 +135,36 @@ function EmptyState() {
 
 // ── Page ─────────────────────────────────────────
 export default function MyReferralsPage() {
+  const { profile: userProfile } = useProfile();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [serviceMap, setServiceMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<string>("newest");
+  const [useSample, setUseSample] = useState(false);
 
   const fetchReferrals = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const res = await fetch("/api/customer/referrals");
+      if (!res.ok) throw new Error("Failed to fetch referrals");
+      const data = await res.json();
 
-    // Get user's company_id
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("company_id")
-      .eq("id", user.id)
-      .single();
+      const refs = (data.referrals ?? []) as Referral[];
+      const svcMap = (data.services ?? {}) as Record<string, string>;
 
-    const { data } = await supabase
-      .from("referrals")
-      .select("*")
-      .eq("submitted_by", user.id)
-      .order("created_at", { ascending: false });
-
-    if (data) setReferrals(data as Referral[]);
-
-    // Fetch services for name lookup
-    if (profile?.company_id) {
-      const { data: svcData } = await supabase
-        .from("services")
-        .select("id, name")
-        .eq("company_id", profile.company_id);
-      if (svcData) {
-        const map: Record<string, string> = {};
-        svcData.forEach((s: { id: string; name: string }) => { map[s.id] = s.name; });
-        setServiceMap(map);
+      if (refs.length === 0 && userProfile && !isDemoAccount(userProfile.email)) {
+        const s = sampleCustomerReferrals;
+        setReferrals(s.referrals as unknown as Referral[]);
+        setServiceMap(s.services);
+        setUseSample(true);
+      } else {
+        setReferrals(refs);
+        setServiceMap(svcMap);
       }
+    } catch {
+      // fetch error
     }
-
     setLoading(false);
-  }, []);
+  }, [userProfile]);
 
   useEffect(() => {
     fetchReferrals();
@@ -197,6 +190,7 @@ export default function MyReferralsPage() {
 
   return (
     <div className="space-y-6">
+      {useSample && <SampleDataBanner />}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold tracking-tight">My Referrals</h1>

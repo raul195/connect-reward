@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useCompany } from "@/hooks/useCompany";
+import { isDemoAccount } from "@/lib/demo";
+import { sampleAdminReports } from "@/lib/sample-data";
+import { SampleDataBanner } from "@/components/shared/SampleDataBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,91 +35,41 @@ export default function ReportsPage() {
   const [topRewards, setTopRewards] = useState<{ name: string; count: number }[]>([]);
 
   const canExport = company?.plan_tier === "growth" || company?.plan_tier === "pro";
-
-  const getStartDate = useCallback((): Date => {
-    const now = new Date();
-    switch (range) {
-      case "week": return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      case "month": return new Date(now.getFullYear(), now.getMonth(), 1);
-      case "30d": return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      case "90d": return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-      case "year": return new Date(now.getFullYear(), 0, 1);
-      default: return new Date(now.getFullYear(), now.getMonth(), 1);
-    }
-  }, [range]);
+  const [useSample, setUseSample] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!profile?.company_id) return;
     setLoading(true);
-    const supabase = createClient();
-    const cid = profile.company_id;
-    const since = getStartDate().toISOString();
+    try {
+      const res = await fetch(`/api/admin/reports?range=${range}`);
+      if (!res.ok) throw new Error("Failed to fetch reports");
+      const data = await res.json();
 
-    // Metrics
-    const { count: totalRef } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", cid).gte("created_at", since);
-    const { count: completed } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", cid).eq("status", "installation_complete").gte("created_at", since);
-    const { data: earnedTx } = await supabase.from("point_transactions").select("amount").eq("company_id", cid).eq("type", "referral_completed").gte("created_at", since);
-    const { data: redeemedTx } = await supabase.from("point_transactions").select("amount").eq("company_id", cid).eq("type", "redemption").gte("created_at", since);
-    const { count: activeCust } = await supabase.from("profiles").select("*", { count: "exact", head: true }).eq("company_id", cid).eq("role", "customer");
-
-    const ptsDist = earnedTx?.reduce((s, t) => s + t.amount, 0) ?? 0;
-    const ptsRedeemed = Math.abs(redeemedTx?.reduce((s, t) => s + t.amount, 0) ?? 0);
-    const t = totalRef ?? 0;
-    const c = completed ?? 0;
-
-    setMetrics({ totalRef: t, completed: c, rate: t > 0 ? Math.round((c / t) * 100) : 0, ptsDist, ptsRedeemed, activeCust: activeCust ?? 0 });
-
-    // Funnel
-    const statuses = ["submitted", "contacted", "consultation_scheduled", "installation_complete"] as const;
-    const funnelData: { stage: string; count: number }[] = [];
-    for (const s of statuses) {
-      const { count: sc } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", cid).eq("status", s);
-      const labels: Record<string, string> = { submitted: "Submitted", contacted: "Contacted", consultation_scheduled: "Consultation Scheduled", installation_complete: "Installation Complete" };
-      funnelData.push({ stage: labels[s], count: sc ?? 0 });
+      if (data.metrics.totalRef === 0 && !isDemoAccount(profile.email)) {
+        setMetrics(sampleAdminReports.metrics);
+        setRefOverTime(sampleAdminReports.refOverTime);
+        setFunnel(sampleAdminReports.funnel);
+        setTopReferrers(sampleAdminReports.topReferrers);
+        setTopRewards(sampleAdminReports.topRewards);
+        setUseSample(true);
+      } else {
+        setMetrics(data.metrics);
+        setRefOverTime(data.refOverTime ?? []);
+        setFunnel(data.funnel ?? []);
+        setTopReferrers(data.topReferrers ?? []);
+        setTopRewards(data.topRewards ?? []);
+        setUseSample(false);
+      }
+    } catch {
+      setMetrics(sampleAdminReports.metrics);
+      setRefOverTime(sampleAdminReports.refOverTime);
+      setFunnel(sampleAdminReports.funnel);
+      setTopReferrers(sampleAdminReports.topReferrers);
+      setTopRewards(sampleAdminReports.topRewards);
+      setUseSample(true);
     }
-    setFunnel(funnelData);
-
-    // Referrals over time (simplified: group by week)
-    const { data: allRef } = await supabase.from("referrals").select("status, created_at").eq("company_id", cid).gte("created_at", since).order("created_at");
-    const timeMap = new Map<string, { submitted: number; completed: number }>();
-    for (const r of allRef ?? []) {
-      const d = new Date(r.created_at);
-      const key = `${d.getMonth() + 1}/${d.getDate()}`;
-      if (!timeMap.has(key)) timeMap.set(key, { submitted: 0, completed: 0 });
-      const entry = timeMap.get(key)!;
-      entry.submitted++;
-      if (r.status === "installation_complete") entry.completed++;
-    }
-    setRefOverTime([...timeMap.entries()].map(([date, v]) => ({ date, ...v })));
-
-    // Top referrers
-    const { data: refProfiles } = await supabase.from("referrals").select("submitted_by, profiles!referrals_submitted_by_fkey(full_name)")
-      .eq("company_id", cid).gte("created_at", since);
-    const refMap = new Map<string, { name: string; count: number }>();
-    for (const r of refProfiles ?? []) {
-      const profiles = r.profiles as unknown as { full_name: string }[] | { full_name: string } | null;
-      const name = Array.isArray(profiles) ? profiles[0]?.full_name ?? "Unknown" : profiles?.full_name ?? "Unknown";
-      const existing = refMap.get(r.submitted_by) ?? { name, count: 0 };
-      existing.count++;
-      refMap.set(r.submitted_by, existing);
-    }
-    setTopReferrers([...refMap.values()].sort((a, b) => b.count - a.count).slice(0, 10));
-
-    // Top rewards
-    const { data: redemptions } = await supabase.from("redemptions").select("reward_id, rewards!redemptions_reward_id_fkey(name)")
-      .eq("company_id", cid).gte("created_at", since);
-    const rwdMap = new Map<string, { name: string; count: number }>();
-    for (const rd of redemptions ?? []) {
-      const rewards = rd.rewards as unknown as { name: string }[] | { name: string } | null;
-      const name = Array.isArray(rewards) ? rewards[0]?.name ?? "Unknown" : rewards?.name ?? "Unknown";
-      const existing = rwdMap.get(rd.reward_id) ?? { name, count: 0 };
-      existing.count++;
-      rwdMap.set(rd.reward_id, existing);
-    }
-    setTopRewards([...rwdMap.values()].sort((a, b) => b.count - a.count).slice(0, 5));
-
     setLoading(false);
-  }, [profile?.company_id, getStartDate]);
+  }, [profile?.company_id, profile?.email, range]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -132,6 +84,7 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
+      {useSample && <SampleDataBanner />}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Reports & Analytics</h1>

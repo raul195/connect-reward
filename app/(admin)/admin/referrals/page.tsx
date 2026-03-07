@@ -3,9 +3,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
-import { awardReferralCompletion } from "@/lib/points";
+import { isDemoAccount } from "@/lib/demo";
+import { sampleAdminReferrals } from "@/lib/sample-data";
+import { SampleDataBanner } from "@/components/shared/SampleDataBanner";
 import { relativeTime } from "@/lib/relative-time";
 import type confettiType from "canvas-confetti";
 import { toast } from "sonner";
@@ -55,80 +56,63 @@ function ReferralManagementInner() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0, rate: 0 });
+  const [useSample, setUseSample] = useState(false);
 
   const fetchReferrals = useCallback(async () => {
     if (!adminProfile?.company_id) return;
     setLoading(true);
-    const supabase = createClient();
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      if (search) params.set("search", search);
 
-    let query = supabase
-      .from("referrals")
-      .select("*, profiles!referrals_submitted_by_fkey(full_name), services(name)")
-      .eq("company_id", adminProfile.company_id)
-      .order("created_at", { ascending: false });
+      const res = await fetch(`/api/admin/referrals?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch referrals");
+      const data = await res.json();
 
-    if (statusFilter !== "all") {
-      query = query.eq("status", statusFilter);
+      if (data.stats.total === 0 && !isDemoAccount(adminProfile.email)) {
+        setReferrals(sampleAdminReferrals.referrals as ReferralRow[]);
+        setStats(sampleAdminReferrals.stats);
+        setUseSample(true);
+      } else {
+        setReferrals(data.referrals as ReferralRow[]);
+        setStats(data.stats);
+        setUseSample(false);
+      }
+    } catch {
+      setReferrals(sampleAdminReferrals.referrals as ReferralRow[]);
+      setStats(sampleAdminReferrals.stats);
+      setUseSample(true);
     }
-    if (search) {
-      query = query.or(`referral_name.ilike.%${search}%,referral_email.ilike.%${search}%`);
-    }
-
-    const { data } = await query;
-    const rows: ReferralRow[] = (data ?? []).map((r) => {
-      const svc = r.services as unknown as { name: string } | null;
-      return {
-        id: r.id,
-        referral_name: r.referral_name,
-        referral_email: r.referral_email,
-        referral_phone: r.referral_phone,
-        status: r.status as ReferralStatus,
-        created_at: r.created_at,
-        points_awarded: r.points_awarded,
-        referrer_name: (r.profiles as { full_name: string } | null)?.full_name ?? "Unknown",
-        submitted_by: r.submitted_by,
-        service_id: r.service_id ?? null,
-        service_name: svc?.name ?? null,
-      };
-    });
-    setReferrals(rows);
-
-    // Stats
-    const { count: totalC } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", adminProfile.company_id);
-    const { count: pendingC } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", adminProfile.company_id).eq("status", "submitted");
-    const { count: compC } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", adminProfile.company_id).eq("status", "installation_complete");
-    const t = totalC ?? 0;
-    const c = compC ?? 0;
-    setStats({ total: t, pending: pendingC ?? 0, completed: c, rate: t > 0 ? Math.round((c / t) * 100) : 0 });
     setLoading(false);
-  }, [adminProfile?.company_id, statusFilter, search]);
+  }, [adminProfile?.company_id, adminProfile?.email, statusFilter, search]);
 
   useEffect(() => { fetchReferrals(); }, [fetchReferrals]);
 
   async function changeStatus(referralId: string, newStatus: ReferralStatus) {
-    const supabase = createClient();
-
-    if (newStatus === "installation_complete") {
-      await awardReferralCompletion(referralId, supabase);
-      import("canvas-confetti").then(mod => {
-        mod.default({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#14b8a6", "#f59e0b", "#8b5cf6"] });
+    try {
+      const res = await fetch("/api/admin/referrals", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: referralId, status: newStatus }),
       });
-      toast.success("Installation marked complete! Points awarded.");
-    } else {
-      await supabase.from("referrals").update({ status: newStatus }).eq("id", referralId);
-
-      // Notify the referrer
-      const ref = referrals.find(r => r.id === referralId);
-      if (ref) {
-        const statusLabel = STATUS_OPTIONS.find(s => s.value === newStatus)?.label ?? newStatus;
-        await supabase.from("notifications").insert({
-          user_id: ref.submitted_by,
-          type: "referral_update",
-          title: "Referral Status Updated",
-          body: `Your referral for ${ref.referral_name} is now: ${statusLabel}`,
-        });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Failed to update status.");
+        return;
       }
-      toast.success("Status updated.");
+
+      if (newStatus === "installation_complete") {
+        import("canvas-confetti").then(mod => {
+          mod.default({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ["#14b8a6", "#f59e0b", "#8b5cf6"] });
+        });
+        toast.success("Installation marked complete! Points awarded.");
+      } else {
+        toast.success("Status updated.");
+      }
+    } catch {
+      toast.error("Failed to update status.");
+      return;
     }
     fetchReferrals();
   }
@@ -162,6 +146,7 @@ function ReferralManagementInner() {
 
   return (
     <div className="space-y-6">
+      {useSample && <SampleDataBanner />}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Referral Management</h1>
         <p className="text-muted-foreground">Track and manage all referrals.</p>

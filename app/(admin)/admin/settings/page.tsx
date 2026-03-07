@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useCompany } from "@/hooks/useCompany";
 import { DEFAULT_SETTINGS } from "@/lib/points";
+/* Note: createClient is still imported for logo upload (Supabase Storage) */
 import { UpgradeCTA } from "@/components/shared/UpgradeCTA";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,8 +58,22 @@ export default function SettingsPage() {
   async function saveSettings() {
     if (!profile?.company_id) return;
     setSaving(true);
-    const supabase = createClient();
-    await supabase.from("companies").update({ settings }).eq("id", profile.company_id);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings }),
+      });
+      if (!res.ok) {
+        toast.error("Failed to save settings.");
+        setSaving(false);
+        return;
+      }
+    } catch {
+      toast.error("Failed to save settings.");
+      setSaving(false);
+      return;
+    }
     setSaving(false);
     toast.success("Settings saved!");
   }
@@ -98,7 +113,12 @@ export default function SettingsPage() {
     }
 
     const { data: urlData } = supabase.storage.from("logos").getPublicUrl(path);
-    await supabase.from("companies").update({ logo_url: urlData.publicUrl }).eq("id", profile.company_id);
+    // Update company logo_url via API to bypass RLS
+    await fetch("/api/admin/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ logo_url: urlData.publicUrl }),
+    });
     updateSetting("logo_url", urlData.publicUrl);
     toast.success("Logo uploaded!");
     setLogoFile(null);
@@ -114,13 +134,12 @@ export default function SettingsPage() {
   // ── Services CRUD ──────────────────────────────
   const fetchServices = useCallback(async () => {
     if (!profile?.company_id) return;
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("services")
-      .select("*")
-      .eq("company_id", profile.company_id)
-      .order("display_order", { ascending: true });
-    if (data) setServices(data as Service[]);
+    try {
+      const res = await fetch("/api/admin/settings");
+      if (!res.ok) throw new Error("Failed to fetch settings");
+      const data = await res.json();
+      if (data.services) setServices(data.services as Service[]);
+    } catch { /* ignore */ }
     setServicesLoading(false);
   }, [profile?.company_id]);
 
@@ -147,21 +166,34 @@ export default function SettingsPage() {
   async function handleSaveService() {
     if (!svcName.trim() || !profile?.company_id) return;
     setSavingService(true);
-    const supabase = createClient();
     const payload = {
-      company_id: profile.company_id,
       name: svcName.trim(),
       description: svcDescription.trim() || null,
       points_value: parseInt(svcPoints) || 500,
       is_active: svcActive,
+      display_order: editingService ? undefined : services.length,
     };
 
-    if (editingService) {
-      await supabase.from("services").update(payload).eq("id", editingService.id);
-      toast.success("Service updated!");
-    } else {
-      await supabase.from("services").insert({ ...payload, display_order: services.length });
-      toast.success("Service added!");
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          editingService
+            ? { action: "update_service", id: editingService.id, ...payload }
+            : { action: "create_service", ...payload }
+        ),
+      });
+      if (!res.ok) {
+        toast.error("Failed to save service.");
+        setSavingService(false);
+        return;
+      }
+      toast.success(editingService ? "Service updated!" : "Service added!");
+    } catch {
+      toast.error("Failed to save service.");
+      setSavingService(false);
+      return;
     }
 
     setServiceDialogOpen(false);
@@ -170,15 +202,28 @@ export default function SettingsPage() {
   }
 
   async function deleteService(id: string) {
-    const supabase = createClient();
-    await supabase.from("services").delete().eq("id", id);
+    try {
+      await fetch("/api/admin/settings", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+    } catch {
+      toast.error("Failed to delete service.");
+      return;
+    }
     toast.success("Service deleted.");
     fetchServices();
   }
 
   async function toggleServiceActive(svc: Service) {
-    const supabase = createClient();
-    await supabase.from("services").update({ is_active: !svc.is_active }).eq("id", svc.id);
+    try {
+      await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "update_service", id: svc.id, is_active: !svc.is_active }),
+      });
+    } catch { /* ignore */ }
     fetchServices();
   }
 

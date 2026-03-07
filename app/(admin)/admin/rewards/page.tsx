@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useCompany } from "@/hooks/useCompany";
+import { isDemoAccount } from "@/lib/demo";
+import { sampleAdminRewards } from "@/lib/sample-data";
+import { SampleDataBanner } from "@/components/shared/SampleDataBanner";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,13 +64,28 @@ export default function RewardsManagement() {
 
   const isFreePlan = company?.plan_tier === "free";
 
+  const [useSample, setUseSample] = useState(false);
+
   const fetchRewards = useCallback(async () => {
     if (!profile?.company_id) return;
-    const supabase = createClient();
-    const { data } = await supabase.from("rewards").select("*").eq("company_id", profile.company_id).order("created_at", { ascending: false });
-    if (data) setRewards(data as Reward[]);
+    try {
+      const res = await fetch("/api/admin/rewards");
+      if (!res.ok) throw new Error("Failed to fetch rewards");
+      const data = await res.json();
+
+      if (data.rewards.length === 0 && !isDemoAccount(profile.email)) {
+        setRewards(sampleAdminRewards.rewards as Reward[]);
+        setUseSample(true);
+      } else {
+        setRewards(data.rewards as Reward[]);
+        setUseSample(false);
+      }
+    } catch {
+      setRewards(sampleAdminRewards.rewards as Reward[]);
+      setUseSample(true);
+    }
     setLoading(false);
-  }, [profile?.company_id]);
+  }, [profile?.company_id, profile?.email]);
 
   useEffect(() => { fetchRewards(); }, [fetchRewards]);
 
@@ -94,9 +111,7 @@ export default function RewardsManagement() {
   async function handleSave() {
     if (!profile?.company_id || !form.name || !form.points_required) return;
     setSaving(true);
-    const supabase = createClient();
     const payload = {
-      company_id: profile.company_id,
       name: form.name,
       description: form.description || null,
       points_required: parseInt(form.points_required),
@@ -105,12 +120,23 @@ export default function RewardsManagement() {
       is_active: form.is_active,
     };
 
-    if (editing) {
-      await supabase.from("rewards").update(payload).eq("id", editing);
-      toast.success("Reward updated!");
-    } else {
-      await supabase.from("rewards").insert(payload);
-      toast.success("Reward created!");
+    try {
+      const res = await fetch("/api/admin/rewards", {
+        method: editing ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editing ? { id: editing, ...payload } : payload),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Failed to save reward.");
+        setSaving(false);
+        return;
+      }
+      toast.success(editing ? "Reward updated!" : "Reward created!");
+    } catch {
+      toast.error("Failed to save reward.");
+      setSaving(false);
+      return;
     }
 
     setSaving(false);
@@ -119,16 +145,33 @@ export default function RewardsManagement() {
   }
 
   async function handleDelete(id: string) {
-    const supabase = createClient();
-    await supabase.from("rewards").delete().eq("id", id);
+    try {
+      const res = await fetch("/api/admin/rewards", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) {
+        toast.error("Failed to delete reward.");
+        return;
+      }
+    } catch {
+      toast.error("Failed to delete reward.");
+      return;
+    }
     toast.success("Reward deleted.");
     setDeleteConfirm(null);
     fetchRewards();
   }
 
   async function toggleActive(id: string, active: boolean) {
-    const supabase = createClient();
-    await supabase.from("rewards").update({ is_active: active }).eq("id", id);
+    try {
+      await fetch("/api/admin/rewards", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, is_active: active }),
+      });
+    } catch { /* ignore */ }
     setRewards(prev => prev.map(r => r.id === id ? { ...r, is_active: active } : r));
   }
 
@@ -145,6 +188,7 @@ export default function RewardsManagement() {
 
   return (
     <div className="space-y-6">
+      {useSample && <SampleDataBanner />}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Rewards</h1>

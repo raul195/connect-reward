@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { relativeTime } from "@/lib/relative-time";
 import { Card, CardContent } from "@/components/ui/card";
 import { Lock } from "lucide-react";
@@ -63,52 +62,16 @@ export default function AchievementsPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchAchievements = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const res = await fetch("/api/customer/achievements");
+      if (!res.ok) throw new Error("Failed to fetch achievements");
+      const data = await res.json();
 
-    // Get user's profile to find company_id
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("company_id")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile) return;
-
-    // Get all achievements for company
-    const { data: allAch } = await supabase
-      .from("achievements")
-      .select("*")
-      .or(`company_id.eq.${profile.company_id},company_id.is.null`);
-
-    // Get user's earned achievements
-    const { data: userAch } = await supabase
-      .from("user_achievements")
-      .select("achievement_id, earned_at")
-      .eq("profile_id", user.id);
-
-    const earnedMap = new Map(userAch?.map((ua) => [ua.achievement_id, ua.earned_at]) ?? []);
-
-    const merged: AchievementWithStatus[] = (allAch ?? []).map((a) => ({
-      id: a.id,
-      name: a.name,
-      description: a.description,
-      icon: a.icon,
-      points_bonus: a.points_bonus,
-      condition: a.condition as Record<string, unknown>,
-      earned: earnedMap.has(a.id),
-      earned_at: earnedMap.get(a.id) ?? null,
-    }));
-
-    // Sort: earned first, then by requirement
-    merged.sort((a, b) => {
-      if (a.earned && !b.earned) return -1;
-      if (!a.earned && b.earned) return 1;
-      return 0;
-    });
-
-    setAchievements(merged);
+      const achs = (data.achievements ?? []) as AchievementWithStatus[];
+      setAchievements(achs);
+    } catch {
+      // fetch error
+    }
     setLoading(false);
   }, []);
 

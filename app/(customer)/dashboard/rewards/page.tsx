@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useCompany } from "@/hooks/useCompany";
+import { sampleCustomerRewards } from "@/lib/sample-data";
+import { SampleDataBanner } from "@/components/shared/SampleDataBanner";
 import type confettiType from "canvas-confetti";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,18 +54,25 @@ export default function RewardsCatalog() {
 
   const isFreePlan = company?.plan_tier === "free";
 
+  const [useSample, setUseSample] = useState(false);
+
   const fetchRewards = useCallback(async () => {
     if (!profile?.company_id) return;
-    const supabase = createClient();
+    try {
+      const res = await fetch("/api/customer/rewards");
+      if (!res.ok) throw new Error("Failed to fetch rewards");
+      const data = await res.json();
 
-    const { data } = await supabase
-      .from("rewards")
-      .select("*")
-      .eq("company_id", profile.company_id)
-      .eq("is_active", true)
-      .order("points_required", { ascending: true });
-
-    if (data) setRewards(data as Reward[]);
+      const rw = (data.rewards ?? []) as Reward[];
+      if (rw.length === 0) {
+        setRewards(sampleCustomerRewards.rewards as unknown as Reward[]);
+        setUseSample(true);
+      } else {
+        setRewards(rw);
+      }
+    } catch {
+      // fetch error
+    }
     setUserPoints(profile.total_points);
     setLoading(false);
   }, [profile]);
@@ -79,51 +87,37 @@ export default function RewardsCatalog() {
     if (!profile) return;
     setRedeeming(true);
 
-    const supabase = createClient();
+    try {
+      const res = await fetch("/api/customer/rewards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rewardId: reward.id }),
+      });
 
-    // Insert redemption
-    const { error: rError } = await supabase.from("redemptions").insert({
-      reward_id: reward.id,
-      user_id: profile.id,
-      company_id: profile.company_id!,
-      status: "pending",
-    });
+      if (!res.ok) {
+        toast.error("Failed to redeem reward. Please try again.");
+        setRedeeming(false);
+        return;
+      }
 
-    if (rError) {
+      setUserPoints((prev) => prev - reward.points_required);
+      setRedeemDialog(null);
+      setRedeeming(false);
+
+      import("canvas-confetti").then(mod => {
+        mod.default({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ["#14b8a6", "#f59e0b", "#8b5cf6"],
+        });
+      });
+
+      toast.success("Reward redeemed! You'll hear from us within 3-5 business days.");
+    } catch {
       toast.error("Failed to redeem reward. Please try again.");
       setRedeeming(false);
-      return;
     }
-
-    // Insert negative point transaction
-    await supabase.from("point_transactions").insert({
-      user_id: profile.id,
-      company_id: profile.company_id!,
-      type: "redemption",
-      amount: -reward.points_required,
-      description: `Redeemed: ${reward.name}`,
-    });
-
-    // Update profile points
-    await supabase
-      .from("profiles")
-      .update({ total_points: userPoints - reward.points_required })
-      .eq("id", profile.id);
-
-    setUserPoints((prev) => prev - reward.points_required);
-    setRedeemDialog(null);
-    setRedeeming(false);
-
-    import("canvas-confetti").then(mod => {
-      mod.default({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ["#14b8a6", "#f59e0b", "#8b5cf6"],
-      });
-    });
-
-    toast.success("Reward redeemed! You'll hear from us within 3-5 business days.");
   }
 
   if (loading) {
@@ -139,6 +133,7 @@ export default function RewardsCatalog() {
 
   return (
     <div className="space-y-6">
+      {useSample && <SampleDataBanner />}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Rewards</h1>
         <p className="text-muted-foreground">

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import type { Company } from "@/lib/types";
 
 export function useCompany(companyId: string | null | undefined) {
@@ -14,16 +13,18 @@ export function useCompany(companyId: string | null | undefined) {
       return;
     }
 
-    const supabase = createClient();
-
     async function fetchCompany() {
-      const { data } = await supabase
-        .from("companies")
-        .select("*")
-        .eq("id", companyId)
-        .single();
-
-      setCompany(data as Company | null);
+      try {
+        const res = await fetch("/api/company");
+        if (!res.ok) {
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        setCompany(data.company as Company | null);
+      } catch {
+        // Network error
+      }
       setLoading(false);
     }
 

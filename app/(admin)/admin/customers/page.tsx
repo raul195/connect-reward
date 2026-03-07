@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useCompany } from "@/hooks/useCompany";
-import { manualPointAdjustment } from "@/lib/points";
+import { isDemoAccount } from "@/lib/demo";
+import { sampleAdminCustomers } from "@/lib/sample-data";
+import { SampleDataBanner } from "@/components/shared/SampleDataBanner";
 import { isAtLimit } from "@/lib/plan-limits";
 import { relativeTime } from "@/lib/relative-time";
 import { TierBadge } from "@/components/shared/TierBadge";
@@ -72,31 +73,39 @@ export default function CustomersPage() {
   const [adjAmount, setAdjAmount] = useState("");
   const [adjReason, setAdjReason] = useState("");
 
+  const [useSample, setUseSample] = useState(false);
+
   const fetchCustomers = useCallback(async () => {
     if (!adminProfile?.company_id) return;
     setLoading(true);
-    const supabase = createClient();
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (tierFilter !== "all") params.set("tier", tierFilter);
+      params.set("sort", sortCol);
+      params.set("asc", String(sortAsc));
+      params.set("page", String(page));
 
-    let query = supabase
-      .from("profiles")
-      .select("*", { count: "exact" })
-      .eq("company_id", adminProfile.company_id)
-      .eq("role", "customer")
-      .order(sortCol, { ascending: sortAsc })
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      const res = await fetch(`/api/admin/customers?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch customers");
+      const data = await res.json();
 
-    if (search) {
-      query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%`);
+      if (data.total === 0 && !isDemoAccount(adminProfile.email)) {
+        setCustomers(sampleAdminCustomers.customers as Profile[]);
+        setTotal(sampleAdminCustomers.total);
+        setUseSample(true);
+      } else {
+        setCustomers(data.customers as Profile[]);
+        setTotal(data.total);
+        setUseSample(false);
+      }
+    } catch {
+      setCustomers(sampleAdminCustomers.customers as Profile[]);
+      setTotal(sampleAdminCustomers.total);
+      setUseSample(true);
     }
-    if (tierFilter !== "all") {
-      query = query.eq("tier", tierFilter);
-    }
-
-    const { data, count } = await query;
-    if (data) setCustomers(data as Profile[]);
-    setTotal(count ?? 0);
     setLoading(false);
-  }, [adminProfile?.company_id, page, search, tierFilter, sortCol, sortAsc]);
+  }, [adminProfile?.company_id, adminProfile?.email, page, search, tierFilter, sortCol, sortAsc]);
 
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
 
@@ -148,14 +157,25 @@ export default function CustomersPage() {
 
   async function handleAdjustPoints() {
     if (!adjustOpen || !adjAmount) return;
-    const supabase = createClient();
-    await manualPointAdjustment(
-      adjustOpen.id,
-      adjustOpen.company_id!,
-      parseInt(adjAmount),
-      adjReason,
-      supabase
-    );
+    try {
+      const res = await fetch("/api/admin/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: adjustOpen.id,
+          amount: parseInt(adjAmount),
+          reason: adjReason,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Failed to adjust points.");
+        return;
+      }
+    } catch {
+      toast.error("Failed to adjust points.");
+      return;
+    }
     toast.success(`Points adjusted for ${adjustOpen.full_name}`);
     setAdjustOpen(null);
     setAdjAmount("");
@@ -168,6 +188,7 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
+      {useSample && <SampleDataBanner />}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Customers</h1>

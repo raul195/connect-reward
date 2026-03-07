@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 import { getTierProgress, getPointsToNextTier, calculateTierFromPoints } from "@/lib/points";
+import { isDemoAccount } from "@/lib/demo";
+import { sampleCustomerDashboard } from "@/lib/sample-data";
+import { SampleDataBanner } from "@/components/shared/SampleDataBanner";
 import { relativeTime } from "@/lib/relative-time";
 import { TierBadge } from "@/components/shared/TierBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -246,82 +248,41 @@ export default function CustomerDashboard() {
   });
   const [loading, setLoading] = useState(true);
 
+  const [useSample, setUseSample] = useState(false);
+
   const fetchData = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const res = await fetch("/api/customer/dashboard");
+      if (!res.ok) throw new Error("Failed to fetch dashboard");
+      const data = await res.json();
 
-    // Fetch profile
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
+      const p = data.profile as Profile;
+      setProfile(p);
+      setServices((data.services ?? []) as Service[]);
+      setTransactions((data.transactions ?? []) as PointTransaction[]);
+      setStats({
+        totalReferrals: data.stats?.totalReferrals ?? 0,
+        completedInstalls: data.stats?.completedInstalls ?? 0,
+        pointsThisMonth: data.stats?.pointsThisMonth ?? 0,
+        rewardsRedeemed: data.stats?.rewardsRedeemed ?? 0,
+      });
 
-    if (profileData) {
-      setProfile(profileData as Profile);
-
-      // Fetch active services for Points Guide
-      if ((profileData as Profile).company_id) {
-        const { data: svcData } = await supabase
-          .from("services")
-          .select("*")
-          .eq("company_id", (profileData as Profile).company_id!)
-          .eq("is_active", true)
-          .order("display_order", { ascending: true });
-        if (svcData) setServices(svcData as Service[]);
+      // Show sample data for new non-demo users
+      if (
+        (data.stats?.totalReferrals ?? 0) === 0 &&
+        (p?.total_points ?? 0) === 0 &&
+        !isDemoAccount(p?.email)
+      ) {
+        const s = sampleCustomerDashboard;
+        setProfile(s.profile as unknown as Profile);
+        setServices(s.services as unknown as Service[]);
+        setTransactions(s.transactions as unknown as PointTransaction[]);
+        setStats(s.stats);
+        setUseSample(true);
       }
+    } catch {
+      // fetch error
     }
-
-    // Fetch last 10 transactions
-    const { data: txData } = await supabase
-      .from("point_transactions")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(10);
-
-    if (txData) setTransactions(txData as PointTransaction[]);
-
-    // Fetch referral counts
-    const { count: totalRef } = await supabase
-      .from("referrals")
-      .select("*", { count: "exact", head: true })
-      .eq("submitted_by", user.id);
-
-    const { count: completedRef } = await supabase
-      .from("referrals")
-      .select("*", { count: "exact", head: true })
-      .eq("submitted_by", user.id)
-      .eq("status", "installation_complete");
-
-    // Points earned this month
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const { data: monthTx } = await supabase
-      .from("point_transactions")
-      .select("amount")
-      .eq("user_id", user.id)
-      .eq("type", "referral_completed")
-      .gte("created_at", startOfMonth.toISOString());
-
-    const pointsThisMonth = monthTx?.reduce((sum, t) => sum + t.amount, 0) ?? 0;
-
-    // Redemptions count
-    const { count: redemptionCount } = await supabase
-      .from("redemptions")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id);
-
-    setStats({
-      totalReferrals: totalRef ?? 0,
-      completedInstalls: completedRef ?? 0,
-      pointsThisMonth,
-      rewardsRedeemed: redemptionCount ?? 0,
-    });
-
     setLoading(false);
   }, []);
 
@@ -346,6 +307,7 @@ export default function CustomerDashboard() {
 
   return (
     <div className="space-y-6">
+      {useSample && <SampleDataBanner />}
       {/* Welcome banner for new customers */}
       {isNewUser && (
         <Card className="border-teal-200 bg-gradient-to-r from-teal-50 to-emerald-50">

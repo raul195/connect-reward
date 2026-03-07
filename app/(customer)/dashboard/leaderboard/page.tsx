@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { TierBadge } from "@/components/shared/TierBadge";
+import { sampleCustomerLeaderboard } from "@/lib/sample-data";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy } from "lucide-react";
@@ -33,108 +33,24 @@ export default function LeaderboardPage() {
 
   const fetchLeaderboard = useCallback(async () => {
     setLoading(true);
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    setCurrentUserId(user.id);
+    try {
+      const res = await fetch(`/api/customer/leaderboard?period=${timeFilter}`);
+      if (!res.ok) throw new Error("Failed to fetch leaderboard");
+      const data = await res.json();
 
-    // Get user's company_id
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("company_id")
-      .eq("id", user.id)
-      .single();
+      const e = (data.entries ?? []) as LeaderboardEntry[];
+      setCurrentUserId(data.currentUserId ?? null);
 
-    if (!profile?.company_id) return;
-
-    if (timeFilter === "all") {
-      // All-time: use profile total_points and count referrals
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, total_points, tier")
-        .eq("company_id", profile.company_id)
-        .eq("role", "customer")
-        .order("total_points", { ascending: false })
-        .limit(20);
-
-      if (!profiles) { setLoading(false); return; }
-
-      // Get referral counts for each profile
-      const entries: LeaderboardEntry[] = [];
-      for (const p of profiles) {
-        const { count } = await supabase
-          .from("referrals")
-          .select("*", { count: "exact", head: true })
-          .eq("submitted_by", p.id);
-
-        entries.push({
-          id: p.id,
-          full_name: p.full_name,
-          total_points: p.total_points,
-          tier: p.tier as LoyaltyTier,
-          referral_count: count ?? 0,
-        });
-      }
-
-      setEntries(entries);
-    } else {
-      // Time-filtered: sum point_transactions in the period
-      const now = new Date();
-      let since: Date;
-      if (timeFilter === "month") {
-        since = new Date(now.getFullYear(), now.getMonth(), 1);
+      if (e.length === 0) {
+        const s = sampleCustomerLeaderboard;
+        setEntries(s.entries as unknown as LeaderboardEntry[]);
+        setCurrentUserId(s.currentUserId);
       } else {
-        // this week (Monday)
-        const day = now.getDay();
-        since = new Date(now);
-        since.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
-        since.setHours(0, 0, 0, 0);
+        setEntries(e);
       }
-
-      const { data: txData } = await supabase
-        .from("point_transactions")
-        .select("user_id, amount")
-        .eq("company_id", profile.company_id)
-        .eq("type", "referral_completed")
-        .gte("created_at", since.toISOString());
-
-      if (!txData) { setLoading(false); return; }
-
-      // Aggregate by profile
-      const agg = new Map<string, number>();
-      for (const tx of txData) {
-        agg.set(tx.user_id, (agg.get(tx.user_id) ?? 0) + tx.amount);
-      }
-
-      // Sort and take top 20
-      const sorted = [...agg.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 20);
-
-      const profileIds = sorted.map(([id]) => id);
-      if (profileIds.length === 0) { setEntries([]); setLoading(false); return; }
-
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, total_points, tier")
-        .in("id", profileIds);
-
-      const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
-
-      const entries: LeaderboardEntry[] = sorted.map(([id, points]) => {
-        const p = profileMap.get(id);
-        return {
-          id,
-          full_name: p?.full_name ?? "Unknown",
-          total_points: points,
-          tier: (p?.tier ?? "bronze") as LoyaltyTier,
-          referral_count: 0,
-        };
-      });
-
-      setEntries(entries);
+    } catch {
+      // fetch error
     }
-
     setLoading(false);
   }, [timeFilter]);
 

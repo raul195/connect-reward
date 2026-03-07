@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import { relativeTime } from "@/lib/relative-time";
+import { useProfile } from "@/hooks/useProfile";
+import { isDemoAccount } from "@/lib/demo";
+import { sampleAdminDashboard } from "@/lib/sample-data";
+import { SampleDataBanner } from "@/components/shared/SampleDataBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +20,6 @@ import {
   UserPlus,
   Star,
   Trophy,
-  Send as SendIcon,
 } from "lucide-react";
 
 interface Metrics {
@@ -40,12 +41,12 @@ interface PipelineCounts {
 
 interface ActivityItem {
   id: string;
-  icon: React.ReactNode;
   text: string;
   time: string;
 }
 
 export default function AdminDashboard() {
+  const { profile } = useProfile();
   const [metrics, setMetrics] = useState<Metrics>({
     activeCustomers: 0, referralsThisMonth: 0, referralsLastMonth: 0,
     pointsDistributed: 0, totalReferrals: 0, completedReferrals: 0,
@@ -53,74 +54,37 @@ export default function AdminDashboard() {
   const [pipeline, setPipeline] = useState<PipelineCounts>({ submitted: 0, contacted: 0, consultation_scheduled: 0, installation_complete: 0, cancelled: 0 });
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [useSample, setUseSample] = useState(false);
 
   const fetchData = useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const res = await fetch("/api/admin/dashboard");
+      if (!res.ok) throw new Error("Failed to fetch dashboard");
+      const data = await res.json();
 
-    const { data: profile } = await supabase.from("profiles").select("company_id").eq("id", user.id).single();
-    if (!profile?.company_id) return;
-    const cid = profile.company_id;
+      const m = data.metrics as Metrics;
+      const isDemo = isDemoAccount(profile?.email);
 
-    // Active customers
-    const { count: custCount } = await supabase.from("profiles").select("*", { count: "exact", head: true })
-      .eq("company_id", cid).eq("role", "customer");
-
-    // Referrals this month
-    const now = new Date();
-    const som = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const { count: thisMonth } = await supabase.from("referrals").select("*", { count: "exact", head: true })
-      .eq("company_id", cid).gte("created_at", som);
-
-    // Referrals last month
-    const lmStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-    const lmEnd = som;
-    const { count: lastMonth } = await supabase.from("referrals").select("*", { count: "exact", head: true })
-      .eq("company_id", cid).gte("created_at", lmStart).lt("created_at", lmEnd);
-
-    // Points distributed this month
-    const { data: ptData } = await supabase.from("point_transactions").select("amount")
-      .eq("company_id", cid).eq("type", "referral_completed").gte("created_at", som);
-    const ptsDist = ptData?.reduce((s, t) => s + t.amount, 0) ?? 0;
-
-    // Total + completed referrals
-    const { count: totalRef } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", cid);
-    const { count: compRef } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", cid).eq("status", "installation_complete");
-
-    setMetrics({
-      activeCustomers: custCount ?? 0,
-      referralsThisMonth: thisMonth ?? 0,
-      referralsLastMonth: lastMonth ?? 0,
-      pointsDistributed: ptsDist,
-      totalReferrals: totalRef ?? 0,
-      completedReferrals: compRef ?? 0,
-    });
-
-    // Pipeline counts
-    const statuses = ["submitted", "contacted", "consultation_scheduled", "installation_complete", "cancelled"] as const;
-    const pipe: PipelineCounts = { submitted: 0, contacted: 0, consultation_scheduled: 0, installation_complete: 0, cancelled: 0 };
-    for (const s of statuses) {
-      const { count } = await supabase.from("referrals").select("*", { count: "exact", head: true }).eq("company_id", cid).eq("status", s);
-      pipe[s] = count ?? 0;
+      if (m.activeCustomers === 0 && m.totalReferrals === 0 && !isDemo) {
+        setMetrics(sampleAdminDashboard.metrics);
+        setPipeline(sampleAdminDashboard.pipeline);
+        setActivity(sampleAdminDashboard.activity);
+        setUseSample(true);
+      } else {
+        setMetrics(m);
+        setPipeline(data.pipeline);
+        setActivity(data.activity ?? []);
+        setUseSample(false);
+      }
+    } catch {
+      // fallback to sample data on error
+      setMetrics(sampleAdminDashboard.metrics);
+      setPipeline(sampleAdminDashboard.pipeline);
+      setActivity(sampleAdminDashboard.activity);
+      setUseSample(true);
     }
-    setPipeline(pipe);
-
-    // Recent activity (point_transactions as proxy)
-    const { data: recentTx } = await supabase.from("point_transactions").select("*, profiles!point_transactions_user_id_fkey(full_name)")
-      .eq("company_id", cid).order("created_at", { ascending: false }).limit(20);
-
-    const items: ActivityItem[] = (recentTx ?? []).map((tx) => {
-      const name = (tx.profiles as { full_name: string } | null)?.full_name ?? "Customer";
-      let icon: React.ReactNode = <Star className="h-4 w-4" />;
-      let text = `${name}: ${tx.description || tx.type}`;
-      if (tx.type === "referral_completed") icon = <Star className="h-4 w-4 text-amber-500" />;
-      if (tx.type === "redemption") { icon = <Gift className="h-4 w-4 text-purple-500" />; }
-      return { id: tx.id, icon, text, time: relativeTime(tx.created_at) };
-    });
-    setActivity(items);
     setLoading(false);
-  }, []);
+  }, [profile?.email]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -166,6 +130,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      {useSample && <SampleDataBanner />}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
         <p className="text-muted-foreground">Manage your referral program and track performance.</p>
@@ -267,7 +232,7 @@ export default function AdminDashboard() {
               <div className="space-y-3 max-h-80 overflow-y-auto">
                 {activity.map(a => (
                   <div key={a.id} className="flex items-center gap-3 text-sm">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">{a.icon}</span>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted"><Star className="h-4 w-4 text-amber-500" /></span>
                     <p className="flex-1 truncate">{a.text}</p>
                     <span className="shrink-0 text-xs text-muted-foreground">{a.time}</span>
                   </div>
