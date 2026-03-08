@@ -118,12 +118,13 @@ async function processAutomations() {
             const cutoff = new Date();
             cutoff.setDate(cutoff.getDate() - days);
 
+            // NULL last_activity = never active = treat as inactive
             const { data: inactiveCustomers } = await admin
               .from("profiles")
               .select("id, full_name, email, total_points, notification_preferences")
               .eq("company_id", company.id)
               .eq("role", "customer")
-              .lt("last_activity", cutoff.toISOString());
+              .or(`last_activity.lt.${cutoff.toISOString()},last_activity.is.null`);
 
             if (!inactiveCustomers) break;
 
