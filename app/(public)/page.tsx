@@ -15,7 +15,7 @@ const jsonLd = {
   name: "Connect Reward",
   applicationCategory: "BusinessApplication",
   description:
-    "Gamified referral rewards platform for home service contractors. Points, tiers, and prizes that turn happy customers into your best salespeople.",
+    "Gamified referral rewards platform for home service businesses. Points, tiers, and prizes that turn happy customers into your best salespeople.",
   operatingSystem: "Web",
   offers: [
     { "@type": "Offer", price: "0", priceCurrency: "USD", name: "Free" },

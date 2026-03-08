@@ -521,9 +521,9 @@ export default function SettingsPage() {
                 { key: "notify_points_earned", label: "Points earned → customer email", default: true },
                 { key: "notify_milestone", label: "Milestone reached → customer email", default: true },
                 { key: "notify_weekly_summary", label: "Weekly summary → customer email", default: true },
-                { key: "notify_new_referral", label: "New referral submitted → contractor email", default: true },
-                { key: "notify_referral_complete", label: "Referral completed → contractor email", default: true },
-                { key: "notify_reward_redeemed", label: "Reward redeemed → contractor email", default: true },
+                { key: "notify_new_referral", label: "New referral submitted → business email", default: true },
+                { key: "notify_referral_complete", label: "Referral completed → business email", default: true },
+                { key: "notify_reward_redeemed", label: "Reward redeemed → business email", default: true },
               ].map((item) => (
                 <div key={item.key}>
                   <div className="flex items-center justify-between py-2">

@@ -293,7 +293,7 @@ export async function manualPointAdjustment(
   }
 }
 
-/** Award review points after contractor verifies */
+/** Award review points after business verifies */
 export async function awardReviewPoints(
   reviewId: string,
   supabase: SupabaseClient

@@ -93,8 +93,8 @@ export const sampleAdminReports = {
 
 export const sampleAdminTeam = {
   members: [
-    { id: "tm1", full_name: "You (Owner)", email: "owner@yourcompany.com", phone: "(555) 100-0001", role: "contractor_owner", created_at: "2024-06-01T10:00:00Z", company_id: "sample" },
-    { id: "tm2", full_name: "Alex Johnson", email: "alex@yourcompany.com", phone: "(555) 100-0002", role: "contractor", created_at: "2024-09-15T10:00:00Z", company_id: "sample" },
+    { id: "tm1", full_name: "You (Owner)", email: "owner@yourcompany.com", phone: "(555) 100-0001", role: "business_owner", created_at: "2024-06-01T10:00:00Z", company_id: "sample" },
+    { id: "tm2", full_name: "Alex Johnson", email: "alex@yourcompany.com", phone: "(555) 100-0002", role: "business", created_at: "2024-09-15T10:00:00Z", company_id: "sample" },
   ],
 };
 

@@ -16,7 +16,7 @@ export async function GET() {
       .from("profiles")
       .select("*")
       .eq("company_id", cid)
-      .in("role", ["contractor", "contractor_owner", "super_admin"])
+      .in("role", ["business", "business_owner", "super_admin"])
       .order("created_at", { ascending: true });
 
     return NextResponse.json({ members: members ?? [] });

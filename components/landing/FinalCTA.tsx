@@ -13,7 +13,7 @@ export function FinalCTA() {
             Ready to Grow Your Business?
           </h2>
           <p className="mt-4 text-lg text-[#64748B]">
-            Be one of the first contractors to transform your referral program. Limited early access spots available.
+            Be one of the first businesses to transform your referral program. Limited early access spots available.
           </p>
           <div className="mt-8">
             <Link

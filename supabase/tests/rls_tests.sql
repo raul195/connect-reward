@@ -25,9 +25,9 @@
 -- Expected: 0 rows
 
 -- ============================================================
--- TEST 3: Contractor can only see their own company's data
+-- TEST 3: Business can only see their own company's data
 -- ============================================================
--- As contractor of Company 1:
+-- As business of Company 1:
 -- SELECT * FROM profiles WHERE company_id = '<company_1_uuid>';
 -- Expected: Returns profiles from Company 1
 

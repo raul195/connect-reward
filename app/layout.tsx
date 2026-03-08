@@ -18,7 +18,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Connect Reward — Gamified Referral Rewards for Home Service Contractors",
+    default: "Connect Reward — Gamified Referral Rewards for Home Service Businesses",
     template: "%s | Connect Reward",
   },
   description:
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Connect Reward",
     description:
-      "Gamified referral rewards for home service contractors. Points, tiers, and prizes that keep your customers coming back.",
+      "Gamified referral rewards for home service businesses. Points, tiers, and prizes that keep your customers coming back.",
     type: "website",
     siteName: "Connect Reward",
   },
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Connect Reward",
     description:
-      "Gamified referral rewards for home service contractors.",
+      "Gamified referral rewards for home service businesses.",
   },
   robots: {
     index: true,

@@ -9,7 +9,7 @@ create extension if not exists "pgcrypto";
 -- ============================================================
 -- ENUMS
 -- ============================================================
-create type user_role as enum ('customer', 'contractor', 'super_admin');
+create type user_role as enum ('customer', 'business', 'super_admin');
 create type referral_status as enum ('pending', 'contacted', 'quoted', 'won', 'lost', 'expired');
 create type reward_type as enum ('discount', 'cashback', 'gift_card', 'service_credit', 'custom');
 create type redemption_status as enum ('pending', 'approved', 'fulfilled', 'rejected');
@@ -242,11 +242,11 @@ alter table notifications    enable row level security;
 alter table achievements     enable row level security;
 alter table user_achievements enable row level security;
 
--- Companies: contractors can manage their own; customers can read their company
-create policy "Contractors manage own company"
+-- Companies: businesses can manage their own; customers can read their company
+create policy "Businesses manage own company"
   on companies for all
   using (
-    id in (select company_id from profiles where id = auth.uid() and role = 'contractor')
+    id in (select company_id from profiles where id = auth.uid() and role = 'business')
   );
 
 create policy "Customers read own company"
@@ -261,15 +261,15 @@ create policy "Super admins full access to companies"
     exists (select 1 from profiles where id = auth.uid() and role = 'super_admin')
   );
 
--- Profiles: users can read/update own; contractors can read profiles in their company
+-- Profiles: users can read/update own; businesses can read profiles in their company
 create policy "Users manage own profile"
   on profiles for all
   using (id = auth.uid());
 
-create policy "Contractors read company profiles"
+create policy "Businesses read company profiles"
   on profiles for select
   using (
-    company_id in (select company_id from profiles where id = auth.uid() and role = 'contractor')
+    company_id in (select company_id from profiles where id = auth.uid() and role = 'business')
   );
 
 create policy "Super admins full access to profiles"
@@ -278,50 +278,50 @@ create policy "Super admins full access to profiles"
     exists (select 1 from profiles where id = auth.uid() and role = 'super_admin')
   );
 
--- Referrals: referrers manage own; contractors manage company referrals
+-- Referrals: referrers manage own; businesses manage company referrals
 create policy "Referrers manage own referrals"
   on referrals for all
   using (referrer_id = auth.uid());
 
-create policy "Contractors manage company referrals"
+create policy "Businesses manage company referrals"
   on referrals for all
   using (
-    company_id in (select company_id from profiles where id = auth.uid() and role = 'contractor')
+    company_id in (select company_id from profiles where id = auth.uid() and role = 'business')
   );
 
--- Rewards: anyone in company can read; contractors can manage
+-- Rewards: anyone in company can read; businesses can manage
 create policy "Company members read rewards"
   on rewards for select
   using (
     company_id in (select company_id from profiles where id = auth.uid())
   );
 
-create policy "Contractors manage rewards"
+create policy "Businesses manage rewards"
   on rewards for all
   using (
-    company_id in (select company_id from profiles where id = auth.uid() and role = 'contractor')
+    company_id in (select company_id from profiles where id = auth.uid() and role = 'business')
   );
 
--- Redemptions: users see own; contractors see company
+-- Redemptions: users see own; businesses see company
 create policy "Users manage own redemptions"
   on redemptions for all
   using (profile_id = auth.uid());
 
-create policy "Contractors manage company redemptions"
+create policy "Businesses manage company redemptions"
   on redemptions for all
   using (
-    company_id in (select company_id from profiles where id = auth.uid() and role = 'contractor')
+    company_id in (select company_id from profiles where id = auth.uid() and role = 'business')
   );
 
--- Point transactions: users see own; contractors see company
+-- Point transactions: users see own; businesses see company
 create policy "Users read own transactions"
   on point_transactions for select
   using (profile_id = auth.uid());
 
-create policy "Contractors read company transactions"
+create policy "Businesses read company transactions"
   on point_transactions for select
   using (
-    company_id in (select company_id from profiles where id = auth.uid() and role = 'contractor')
+    company_id in (select company_id from profiles where id = auth.uid() and role = 'business')
   );
 
 -- Reviews: anyone in company can read; own reviews manageable
@@ -348,10 +348,10 @@ create policy "Company members read achievements"
     or company_id is null
   );
 
-create policy "Contractors manage achievements"
+create policy "Businesses manage achievements"
   on achievements for all
   using (
-    company_id in (select company_id from profiles where id = auth.uid() and role = 'contractor')
+    company_id in (select company_id from profiles where id = auth.uid() and role = 'business')
   );
 
 -- User achievements: users see own

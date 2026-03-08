@@ -22,7 +22,7 @@ const INITIAL_FLOWS: FlowItem[] = [
   { id: "referral-submit", label: "Customer submits referral → confirmation email sent", status: "untested" },
   { id: "referral-installed", label: "Admin updates referral to \"installed\" → points awarded → notification email sent", status: "untested" },
   { id: "redeem-reward", label: "Customer redeems reward → confirmation email sent", status: "untested" },
-  { id: "contractor-onboard", label: "Contractor onboarding → first customer invitation sent", status: "untested" },
+  { id: "business-onboard", label: "Business onboarding → first customer invitation sent", status: "untested" },
   { id: "leaderboard", label: "Leaderboard updates correctly after points awarded", status: "untested" },
   { id: "plan-limits", label: "Plan tier limits enforced (free plan customer cap)", status: "untested" },
 ];

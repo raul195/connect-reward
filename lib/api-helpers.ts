@@ -37,7 +37,7 @@ export async function getAuthContext(): Promise<
 }
 
 export function requireAdmin(profile: Profile): NextResponse | null {
-  if (!["contractor", "contractor_owner", "super_admin"].includes(profile.role)) {
+  if (!["business", "business_owner", "super_admin"].includes(profile.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   if (!profile.company_id) {

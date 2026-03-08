@@ -36,8 +36,8 @@ CREATE POLICY "Company members read services" ON services FOR SELECT USING (
   company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid())
 );
 
-CREATE POLICY "Contractors manage services" ON services FOR ALL USING (
-  company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid() AND role IN ('contractor', 'super_admin'))
+CREATE POLICY "Businesses manage services" ON services FOR ALL USING (
+  company_id IN (SELECT company_id FROM profiles WHERE id = auth.uid() AND role IN ('business', 'super_admin'))
 );
 
 CREATE TRIGGER services_updated_at BEFORE UPDATE ON services

@@ -20,7 +20,7 @@ export function Industries() {
             Built for Home Services
           </h2>
           <p className="mt-3 text-lg text-[#64748B]">
-            Trusted by contractors across industries
+            Trusted by businesses across industries
           </p>
         </FadeIn>
 

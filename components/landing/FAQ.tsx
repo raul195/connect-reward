@@ -23,7 +23,7 @@ const faqs = [
   {
     question: "What industries does Connect Reward support?",
     answer:
-      "Connect Reward is built for home service contractors — solar, roofing, HVAC, windows, turf, pest control, and more. If your business relies on referrals, it's built for you.",
+      "Connect Reward is built for home service businesses — solar, roofing, HVAC, windows, turf, pest control, and more. If your business relies on referrals, it's built for you.",
   },
 ];
 

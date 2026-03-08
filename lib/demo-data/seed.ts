@@ -77,30 +77,30 @@ export async function seedDemoData() {
   if (rwdError) throw new Error(`Rewards creation failed: ${rwdError.message}`);
   console.log(`Created ${rewards.length} rewards`);
 
-  // 4. Create contractor
-  const contractorEmail = `demo-contractor${DEMO_EMAIL_DOMAIN}`;
-  const { data: contractorUser, error: contractorError } =
+  // 4. Create business
+  const businessEmail = `demo-business${DEMO_EMAIL_DOMAIN}`;
+  const { data: businessUser, error: businessError } =
     await admin.auth.admin.createUser({
-      email: contractorEmail,
+      email: businessEmail,
       password: DEMO_PASSWORD,
-      user_metadata: { full_name: "Demo Contractor", role: "contractor_owner" },
+      user_metadata: { full_name: "Demo Business", role: "business_owner" },
       email_confirm: true,
     });
 
-  if (contractorError) throw new Error(`Contractor creation failed: ${contractorError.message}`);
+  if (businessError) throw new Error(`Business creation failed: ${businessError.message}`);
 
   // Upsert profile (trigger may not exist in live DB)
   await admin
     .from("profiles")
     .upsert({
-      id: contractorUser.user.id,
-      email: contractorEmail,
-      full_name: "Demo Contractor",
+      id: businessUser.user.id,
+      email: businessEmail,
+      full_name: "Demo Business",
       company_id: companyId,
-      role: "contractor_owner",
+      role: "business_owner",
     });
 
-  console.log(`Created contractor: ${contractorEmail}`);
+  console.log(`Created business: ${businessEmail}`);
 
   // 5. Create customers
   const customerIds: string[] = [];
@@ -273,6 +273,6 @@ export async function seedDemoData() {
   console.log("Created 2 fulfilled redemptions");
 
   console.log("\nDemo data seeded successfully!");
-  console.log(`Contractor: demo-contractor${DEMO_EMAIL_DOMAIN} / ${DEMO_PASSWORD}`);
+  console.log(`Business: demo-business${DEMO_EMAIL_DOMAIN} / ${DEMO_PASSWORD}`);
   console.log(`Customers:  demo-customer-{1-5}${DEMO_EMAIL_DOMAIN} / ${DEMO_PASSWORD}`);
 }

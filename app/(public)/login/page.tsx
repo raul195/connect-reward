@@ -51,7 +51,7 @@ function LoginForm() {
     if (user) {
       const role = user.user_metadata?.role as string | undefined;
 
-      if (role === "contractor" || role === "contractor_owner") {
+      if (role === "business" || role === "business_owner") {
         router.push("/admin");
       } else if (role === "super_admin") {
         router.push("/super-admin");

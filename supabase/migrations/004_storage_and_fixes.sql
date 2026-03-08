@@ -27,32 +27,32 @@ CREATE POLICY "Public logo read access"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'logos');
 
--- Contractors and super_admins can upload logos
-CREATE POLICY "Contractors upload logos"
+-- Businesses and super_admins can upload logos
+CREATE POLICY "Businesses upload logos"
 ON storage.objects FOR INSERT
 WITH CHECK (
   bucket_id = 'logos'
   AND auth.uid() IN (
-    SELECT id FROM profiles WHERE role IN ('contractor', 'super_admin')
+    SELECT id FROM profiles WHERE role IN ('business', 'super_admin')
   )
 );
 
--- Contractors and super_admins can update their logos
-CREATE POLICY "Contractors update logos"
+-- Businesses and super_admins can update their logos
+CREATE POLICY "Businesses update logos"
 ON storage.objects FOR UPDATE
 USING (
   bucket_id = 'logos'
   AND auth.uid() IN (
-    SELECT id FROM profiles WHERE role IN ('contractor', 'super_admin')
+    SELECT id FROM profiles WHERE role IN ('business', 'super_admin')
   )
 );
 
--- Contractors and super_admins can delete their logos
-CREATE POLICY "Contractors delete logos"
+-- Businesses and super_admins can delete their logos
+CREATE POLICY "Businesses delete logos"
 ON storage.objects FOR DELETE
 USING (
   bucket_id = 'logos'
   AND auth.uid() IN (
-    SELECT id FROM profiles WHERE role IN ('contractor', 'super_admin')
+    SELECT id FROM profiles WHERE role IN ('business', 'super_admin')
   )
 );

@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
         <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; color: #1A202C;">
           <h2 style="color: #0D9488;">Hi ${full_name.trim()},</h2>
           <p>Thanks for applying for early access to Connect Reward!</p>
-          <p>We're reviewing applications and onboarding contractors in batches. Here's what happens next:</p>
+          <p>We're reviewing applications and onboarding businesses in batches. Here's what happens next:</p>
           <ol>
             <li><strong>We review your application</strong> (usually within 48 hours)</li>
             <li><strong>We'll reach out</strong> to learn more about your business</li>

@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // 2. Verify the caller is a contractor/super_admin with a company
+  // 2. Verify the caller is a business/super_admin with a company
   const { data: callerProfile } = await supabase
     .from("profiles")
     .select("company_id, role")
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
   if (
     !callerProfile?.company_id ||
-    !["contractor", "contractor_owner", "super_admin"].includes(callerProfile.role)
+    !["business", "business_owner", "super_admin"].includes(callerProfile.role)
   ) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

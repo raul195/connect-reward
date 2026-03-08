@@ -59,7 +59,7 @@ export function Hero() {
           <FadeIn className="lg:col-span-3">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-4 py-1.5 text-sm font-semibold text-[#0D9488]">
               <Zap className="h-4 w-4" />
-              For Home Service Contractors
+              For Home Service Businesses
             </span>
 
             <h1 className="mt-6 text-4xl font-extrabold leading-tight tracking-tight text-[#1A202C] sm:text-5xl lg:text-6xl">

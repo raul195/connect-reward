@@ -23,7 +23,7 @@ export async function GET() {
         .from("profiles")
         .select("*", { count: "exact", head: true })
         .eq("company_id", cid)
-        .in("role", ["contractor", "contractor_owner"]),
+        .in("role", ["business", "business_owner"]),
     ]);
 
     return NextResponse.json({

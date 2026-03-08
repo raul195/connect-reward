@@ -388,7 +388,7 @@ export default function EarlyAccessPage() {
             Request Early Access to Connect Reward
           </h1>
           <p className="mt-3 text-[#64748B]">
-            Join the waitlist for the referral rewards platform built for home service contractors. We&apos;re onboarding businesses in batches — apply now to reserve your spot.
+            Join the waitlist for the referral rewards platform built for home service businesses. We&apos;re onboarding businesses in batches — apply now to reserve your spot.
           </p>
           <div className="mt-4 flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-[#64748B]">
             <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-[#0D9488]" /> Free to apply</span>

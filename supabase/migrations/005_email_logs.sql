@@ -16,11 +16,11 @@ CREATE INDEX idx_email_logs_created ON email_logs(created_at DESC);
 
 ALTER TABLE email_logs ENABLE ROW LEVEL SECURITY;
 
--- Contractors see only their company's logs
-CREATE POLICY "Contractors read own email logs" ON email_logs FOR SELECT
+-- Businesses see only their company's logs
+CREATE POLICY "Businesses read own email logs" ON email_logs FOR SELECT
   USING (company_id IN (
     SELECT company_id FROM profiles WHERE id = auth.uid()
-    AND role IN ('contractor', 'contractor_owner')
+    AND role IN ('business', 'business_owner')
   ));
 
 -- Super admins see all

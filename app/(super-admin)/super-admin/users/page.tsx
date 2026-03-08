@@ -20,8 +20,8 @@ const PAGE_SIZE = 20;
 
 const ROLE_COLORS: Record<string, string> = {
   customer: "bg-green-100 text-green-700",
-  contractor: "bg-blue-100 text-blue-700",
-  contractor_owner: "bg-blue-100 text-blue-700",
+  business: "bg-blue-100 text-blue-700",
+  business_owner: "bg-blue-100 text-blue-700",
   super_admin: "bg-red-100 text-red-700",
 };
 
@@ -88,8 +88,8 @@ export default function UsersPage() {
           <SelectContent>
             <SelectItem value="all">All Roles</SelectItem>
             <SelectItem value="customer">Customer</SelectItem>
-            <SelectItem value="contractor">Contractor</SelectItem>
-            <SelectItem value="contractor_owner">Contractor Owner</SelectItem>
+            <SelectItem value="business">Business</SelectItem>
+            <SelectItem value="business_owner">Business Owner</SelectItem>
             <SelectItem value="super_admin">Super Admin</SelectItem>
           </SelectContent>
         </Select>

@@ -2,7 +2,7 @@
 // Database types — mirrors the live Supabase schema
 // ============================================================
 
-export type UserRole = "customer" | "contractor" | "contractor_owner" | "super_admin";
+export type UserRole = "customer" | "business" | "business_owner" | "super_admin";
 export type ReferralStatus = "submitted" | "contacted" | "consultation_scheduled" | "installation_complete" | "cancelled";
 export type RewardCategory = string;
 export type RedemptionStatus = "pending" | "approved" | "fulfilled" | "rejected";

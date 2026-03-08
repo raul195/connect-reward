@@ -1,7 +1,7 @@
 {
   "name": "Connect Reward",
   "short_name": "Connect Reward",
-  "description": "Gamified referral rewards for home service contractors",
+  "description": "Gamified referral rewards for home service businesses",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

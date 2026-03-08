@@ -19,10 +19,10 @@ CREATE TRIGGER set_automation_settings_updated_at
 
 ALTER TABLE automation_settings ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Contractors manage own automation settings" ON automation_settings FOR ALL
+CREATE POLICY "Businesses manage own automation settings" ON automation_settings FOR ALL
   USING (company_id IN (
     SELECT company_id FROM profiles WHERE id = auth.uid()
-    AND role IN ('contractor', 'contractor_owner')
+    AND role IN ('business', 'business_owner')
   ));
 
 CREATE POLICY "Super admins full access automation settings" ON automation_settings FOR ALL
@@ -49,10 +49,10 @@ CREATE TRIGGER set_email_automation_triggers_updated_at
 
 ALTER TABLE email_automation_triggers ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Contractors manage own triggers" ON email_automation_triggers FOR ALL
+CREATE POLICY "Businesses manage own triggers" ON email_automation_triggers FOR ALL
   USING (company_id IN (
     SELECT company_id FROM profiles WHERE id = auth.uid()
-    AND role IN ('contractor', 'contractor_owner')
+    AND role IN ('business', 'business_owner')
   ));
 
 CREATE POLICY "Super admins full access triggers" ON email_automation_triggers FOR ALL
@@ -87,10 +87,10 @@ CREATE INDEX idx_draft_queue_approved_send
 
 ALTER TABLE email_draft_queue ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Contractors manage own drafts" ON email_draft_queue FOR ALL
+CREATE POLICY "Businesses manage own drafts" ON email_draft_queue FOR ALL
   USING (company_id IN (
     SELECT company_id FROM profiles WHERE id = auth.uid()
-    AND role IN ('contractor', 'contractor_owner')
+    AND role IN ('business', 'business_owner')
   ));
 
 CREATE POLICY "Super admins full access drafts" ON email_draft_queue FOR ALL

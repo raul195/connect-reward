@@ -29,8 +29,8 @@ import type { Profile } from "@/lib/types";
 const TEAM_LIMITS: Record<string, number> = { free: 1, starter: 3, growth: 10, pro: 999 };
 
 const ROLE_BADGES: Record<string, { label: string; color: string }> = {
-  contractor: { label: "Owner", color: "bg-amber-100 text-amber-700" },
-  contractor_owner: { label: "Owner", color: "bg-amber-100 text-amber-700" },
+  business: { label: "Owner", color: "bg-amber-100 text-amber-700" },
+  business_owner: { label: "Owner", color: "bg-amber-100 text-amber-700" },
   manager: { label: "Manager", color: "bg-blue-100 text-blue-700" },
   rep: { label: "Rep", color: "bg-gray-100 text-gray-700" },
 };
@@ -175,7 +175,7 @@ export default function TeamPage() {
                 <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No team members.</td></tr>
               ) : (
                 members.map((m) => {
-                  const roleCfg = ROLE_BADGES[m.role] ?? ROLE_BADGES.contractor;
+                  const roleCfg = ROLE_BADGES[m.role] ?? ROLE_BADGES.business;
                   return (
                     <tr key={m.id} className="border-b">
                       <td className="p-3 font-medium">{m.full_name}</td>

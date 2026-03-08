@@ -30,7 +30,7 @@ All under `/dashboard/` with sidebar (Dashboard, Submit Referral, My Referrals, 
 | `/dashboard/notifications` | `app/(customer)/dashboard/notifications/page.tsx` | Notifications |
 | `/dashboard/profile` | `app/(customer)/dashboard/profile/page.tsx` | Profile and avatar |
 
-### Admin (contractors / company owners)
+### Admin (businesses / company owners)
 All under `/admin/` with sidebar (Dashboard, Referrals, Customers, etc.)
 
 | Path | File | What it does |
@@ -289,10 +289,10 @@ For each file: what it controls, what to avoid breaking, and what kinds of featu
 - Core tables: `companies`, `profiles`, `referrals`, `rewards`, `redemptions`, `point_transactions`, `reviews`, `notifications`, `achievements`, `user_achievements`.
 - Trigger: `handle_new_user()` — creates a row in `profiles` on `auth.users` insert (signup).
 - Trigger: `update_updated_at()` on several tables.
-- **All RLS policies** that define who can select/insert/update/delete on each table (contractors vs customers vs super_admin).
+- **All RLS policies** that define who can select/insert/update/delete on each table (businesses vs customers vs super_admin).
 
 **What to be careful not to break**
-- Changing or dropping RLS policies can expose or hide data incorrectly (e.g. customers seeing other companies’ data, or contractors unable to manage their company).
+- Changing or dropping RLS policies can expose or hide data incorrectly (e.g. customers seeing other companies’ data, or businesses unable to manage their company).
 - Changing the `handle_new_user()` trigger or `profiles` shape can break signup or leave new users without a profile.
 - Enum or column renames require coordinated changes in app code and possibly later migrations.
 
@@ -306,7 +306,7 @@ For each file: what it controls, what to avoid breaking, and what kinds of featu
 ### 8. `app/api/customers/route.ts`
 
 **What it controls**
-- **POST /api/customers:** Allows an authenticated contractor/super_admin to create a new “customer” (auth user + profile with `company_id`, role `customer`, and contact/address fields).
+- **POST /api/customers:** Allows an authenticated business/super_admin to create a new “customer” (auth user + profile with `company_id`, role `customer`, and contact/address fields).
 - Validates input (name, email, phone, zip), checks plan customer limit, creates user via **admin** client, then updates the auto-created profile with company and extra fields.
 
 **What to be careful not to break**
@@ -323,7 +323,7 @@ For each file: what it controls, what to avoid breaking, and what kinds of featu
 ### 9. `app/(public)/login/page.tsx`
 
 **What it controls**
-- Login form (email/password), call to `supabase.auth.signInWithPassword`, then fetch profile and **role-based redirect**: contractor → `/admin`, super_admin → `/super-admin`, everyone else (e.g. customer) → `redirect` param or `/dashboard`.
+- Login form (email/password), call to `supabase.auth.signInWithPassword`, then fetch profile and **role-based redirect**: business → `/admin`, super_admin → `/super-admin`, everyone else (e.g. customer) → `redirect` param or `/dashboard`.
 
 **What to be careful not to break**
 - Redirect logic must stay in sync with route groups: new roles or dashboards need a corresponding branch here, or users land on the wrong area.

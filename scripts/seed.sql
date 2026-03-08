@@ -44,14 +44,14 @@ INSERT INTO services (id, company_id, name, description, points_value, display_o
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
--- 3. DEMO CONTRACTOR (Owner) — Mike Reynolds
+-- 3. DEMO BUSINESS (Owner) — Mike Reynolds
 -- ============================================================
 -- Note: For actual login, create this user in Supabase Auth first
 INSERT INTO profiles (id, company_id, role, full_name, email, phone, loyalty_tier, total_points, address, city, state, zip)
 VALUES (
   'cccccccc-cccc-cccc-cccc-cccccccc0001',
   '11111111-1111-1111-1111-111111111111',
-  'contractor',
+  'business',
   'Mike Reynolds',
   'mike@sunbrightsolar.com',
   '(801) 555-0100',
@@ -68,9 +68,9 @@ ON CONFLICT (id) DO UPDATE SET full_name = EXCLUDED.full_name;
 -- 4. DEMO TEAM MEMBERS
 -- ============================================================
 INSERT INTO profiles (id, company_id, role, full_name, email, phone, loyalty_tier, total_points) VALUES
-('cccccccc-cccc-cccc-cccc-cccccccc0002', '11111111-1111-1111-1111-111111111111', 'contractor', 'Sarah Chen', 'sarah@sunbrightsolar.com', '(801) 555-0101', 'bronze', 0),
-('cccccccc-cccc-cccc-cccc-cccccccc0003', '11111111-1111-1111-1111-111111111111', 'contractor', 'James Martinez', 'james@sunbrightsolar.com', '(801) 555-0102', 'bronze', 0),
-('cccccccc-cccc-cccc-cccc-cccccccc0004', '11111111-1111-1111-1111-111111111111', 'contractor', 'Lisa Thompson', 'lisa@sunbrightsolar.com', '(801) 555-0103', 'bronze', 0)
+('cccccccc-cccc-cccc-cccc-cccccccc0002', '11111111-1111-1111-1111-111111111111', 'business', 'Sarah Chen', 'sarah@sunbrightsolar.com', '(801) 555-0101', 'bronze', 0),
+('cccccccc-cccc-cccc-cccc-cccccccc0003', '11111111-1111-1111-1111-111111111111', 'business', 'James Martinez', 'james@sunbrightsolar.com', '(801) 555-0102', 'bronze', 0),
+('cccccccc-cccc-cccc-cccc-cccccccc0004', '11111111-1111-1111-1111-111111111111', 'business', 'Lisa Thompson', 'lisa@sunbrightsolar.com', '(801) 555-0103', 'bronze', 0)
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
@@ -325,7 +325,7 @@ ON CONFLICT (id) DO NOTHING;
 -- This seed creates:
 -- - 1 demo company (SunBright Solar) on Growth plan
 -- - 4 services with different point values (500, 300, 750, 150 pts)
--- - 1 contractor owner + 3 team members
+-- - 1 business owner + 3 team members
 -- - 15 customers with varying engagement levels
 -- - 24 referrals across all statuses:
 --   * 8 completed (won)
@@ -345,5 +345,5 @@ ON CONFLICT (id) DO NOTHING;
 -- Key demo accounts for screenshots:
 -- - john.smith@email.com - Power user with 3,500 pts, Gold tier, many referrals
 -- - maria.garcia@email.com - Active user with 2,700 pts, Gold tier
--- - mike@sunbrightsolar.com - Contractor owner (for admin dashboard)
+-- - mike@sunbrightsolar.com - Business owner (for admin dashboard)
 -- ============================================================
