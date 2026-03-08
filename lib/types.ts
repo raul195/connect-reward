@@ -187,6 +187,54 @@ export interface EmailLog {
   created_at: string;
 }
 
+// ── Email Automation Phase 2 ──
+
+export type AutomationTriggerType =
+  | "inactivity_30"
+  | "inactivity_60"
+  | "points_close_to_reward"
+  | "referral_nudge"
+  | "milestone_reached"
+  | "program_reminder";
+
+export type EmailDraftStatus = "draft" | "approved" | "sent" | "cancelled";
+
+export interface AutomationSettings {
+  company_id: string;
+  auto_approve_emails: boolean;
+  preferred_send_time: string; // HH:MM
+  timezone: string;
+  monthly_reminders_enabled: boolean;
+  reminder_frequency: "monthly" | "quarterly";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EmailAutomationTrigger {
+  id: string;
+  company_id: string;
+  trigger_type: AutomationTriggerType;
+  condition_data: Record<string, unknown>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EmailDraft {
+  id: string;
+  company_id: string;
+  customer_id: string;
+  trigger_type: AutomationTriggerType;
+  template_name: string;
+  subject: string;
+  preview_text: string | null;
+  email_data: Record<string, unknown>;
+  status: EmailDraftStatus;
+  scheduled_send_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface EarlyAccessApplication {
   id: string;
   full_name: string;

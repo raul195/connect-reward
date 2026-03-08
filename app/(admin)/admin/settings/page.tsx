@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, Upload, X, Plus, Pencil, Trash2, GripVertical } from "lucide-react";
-import type { Service } from "@/lib/types";
+import type { Service, AutomationTriggerType, EmailAutomationTrigger } from "@/lib/types";
 
 export default function SettingsPage() {
   const { profile } = useProfile();
@@ -44,6 +44,18 @@ export default function SettingsPage() {
   const [svcPoints, setSvcPoints] = useState("500");
   const [svcActive, setSvcActive] = useState(true);
   const [savingService, setSavingService] = useState(false);
+
+  // Automation state
+  const [autoSettings, setAutoSettings] = useState({
+    auto_approve_emails: false,
+    preferred_send_time: "10:00",
+    timezone: "America/New_York",
+    monthly_reminders_enabled: true,
+    reminder_frequency: "monthly" as "monthly" | "quarterly",
+  });
+  const [triggers, setTriggers] = useState<EmailAutomationTrigger[]>([]);
+  const [autoLoading, setAutoLoading] = useState(true);
+  const [savingAuto, setSavingAuto] = useState(false);
 
   useEffect(() => {
     if (company?.settings) {
@@ -227,6 +239,84 @@ export default function SettingsPage() {
     fetchServices();
   }
 
+  // ── Automation settings ──────────────────────────
+  const fetchAutomation = useCallback(async () => {
+    if (!profile?.company_id) return;
+    try {
+      const res = await fetch("/api/admin/automation-settings");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (data.settings) {
+        setAutoSettings({
+          auto_approve_emails: data.settings.auto_approve_emails ?? false,
+          preferred_send_time: data.settings.preferred_send_time ?? "10:00",
+          timezone: data.settings.timezone ?? "America/New_York",
+          monthly_reminders_enabled: data.settings.monthly_reminders_enabled ?? true,
+          reminder_frequency: data.settings.reminder_frequency ?? "monthly",
+        });
+      }
+      if (data.triggers) setTriggers(data.triggers as EmailAutomationTrigger[]);
+    } catch { /* ignore */ }
+    setAutoLoading(false);
+  }, [profile?.company_id]);
+
+  useEffect(() => { fetchAutomation(); }, [fetchAutomation]);
+
+  async function saveAutomation() {
+    setSavingAuto(true);
+    try {
+      const res = await fetch("/api/admin/automation-settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(autoSettings),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Automation settings saved!");
+    } catch {
+      toast.error("Failed to save automation settings.");
+    }
+    setSavingAuto(false);
+  }
+
+  async function toggleTrigger(trigger: EmailAutomationTrigger) {
+    try {
+      await fetch("/api/admin/automation-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trigger_id: trigger.id, is_active: !trigger.is_active }),
+      });
+      fetchAutomation();
+    } catch {
+      toast.error("Failed to toggle trigger.");
+    }
+  }
+
+  const TRIGGER_INFO: Record<AutomationTriggerType, { label: string; description: string }> = {
+    inactivity_30: { label: "30-day inactivity", description: "Send a gentle nudge to customers who haven't been active in 30 days" },
+    inactivity_60: { label: "60-day inactivity (urgent)", description: "Send an urgent reminder to customers inactive for 60 days" },
+    points_close_to_reward: { label: "Close to reward", description: "Notify customers who are within 20% of earning a reward" },
+    referral_nudge: { label: "Referral follow-up", description: "Check in with customers whose referrals have been pending for 14+ days" },
+    milestone_reached: { label: "Milestone celebration", description: "Congratulate customers when they hit referral milestones" },
+    program_reminder: { label: "Monthly summary", description: "Send a monthly or quarterly activity recap to all customers" },
+  };
+
+  const SEND_TIMES = Array.from({ length: 11 }, (_, i) => {
+    const hour = i + 7; // 7am to 5pm
+    const label = hour <= 12 ? `${hour}:00 AM` : `${hour - 12}:00 PM`;
+    const value = `${String(hour).padStart(2, "0")}:00`;
+    return { label, value };
+  });
+
+  const TIMEZONES = [
+    { label: "Eastern (ET)", value: "America/New_York" },
+    { label: "Central (CT)", value: "America/Chicago" },
+    { label: "Mountain (MT)", value: "America/Denver" },
+    { label: "Pacific (PT)", value: "America/Los_Angeles" },
+    { label: "Alaska (AKT)", value: "America/Anchorage" },
+    { label: "Hawaii (HT)", value: "Pacific/Honolulu" },
+    { label: "Arizona (MST)", value: "America/Phoenix" },
+  ];
+
   const isFreePlan = company?.plan_tier === "free";
 
   return (
@@ -243,6 +333,7 @@ export default function SettingsPage() {
           <TabsTrigger value="tiers">Tiers</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="branding">Branding</TabsTrigger>
+          <TabsTrigger value="automation">Automation</TabsTrigger>
         </TabsList>
 
         {/* Bonuses & Settings Tab */}
@@ -523,6 +614,141 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Automation Tab */}
+        <TabsContent value="automation">
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Automation</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Configure automated email triggers and delivery preferences. Emails are queued as drafts for your review before sending.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {autoLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => <div key={i} className="h-12 animate-pulse rounded bg-muted" />)}
+                </div>
+              ) : (
+                <>
+                  {/* Trigger Toggles */}
+                  <div>
+                    <Label className="text-base font-semibold">Email Triggers</Label>
+                    <p className="text-sm text-muted-foreground mb-4">Enable or disable automated email triggers.</p>
+                    <div className="space-y-1">
+                      {(Object.keys(TRIGGER_INFO) as AutomationTriggerType[]).map((type) => {
+                        const trigger = triggers.find(t => t.trigger_type === type);
+                        const info = TRIGGER_INFO[type];
+                        return (
+                          <div key={type}>
+                            <div className="flex items-center justify-between py-3">
+                              <div>
+                                <Label className="font-medium">{info.label}</Label>
+                                <p className="text-sm text-muted-foreground">{info.description}</p>
+                              </div>
+                              <Switch
+                                checked={trigger?.is_active ?? true}
+                                onCheckedChange={() => trigger && toggleTrigger(trigger)}
+                                disabled={!trigger}
+                              />
+                            </div>
+                            <Separator />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Delivery Preferences */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Preferred send time</Label>
+                      <Select
+                        value={autoSettings.preferred_send_time}
+                        onValueChange={(v) => setAutoSettings(prev => ({ ...prev, preferred_send_time: v }))}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {SEND_TIMES.map(t => (
+                            <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">When approved emails should be delivered</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Timezone</Label>
+                      <Select
+                        value={autoSettings.timezone}
+                        onValueChange={(v) => setAutoSettings(prev => ({ ...prev, timezone: v }))}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {TIMEZONES.map(tz => (
+                            <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Auto-approve toggle */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="font-medium">Auto-approve emails</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Automatically approve draft emails after 24 hours without manual review
+                      </p>
+                    </div>
+                    <Switch
+                      checked={autoSettings.auto_approve_emails}
+                      onCheckedChange={(v) => setAutoSettings(prev => ({ ...prev, auto_approve_emails: v }))}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  {/* Monthly reminders */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="font-medium">Monthly reminders</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Send activity recap emails to all customers
+                      </p>
+                    </div>
+                    <Switch
+                      checked={autoSettings.monthly_reminders_enabled}
+                      onCheckedChange={(v) => setAutoSettings(prev => ({ ...prev, monthly_reminders_enabled: v }))}
+                    />
+                  </div>
+
+                  {autoSettings.monthly_reminders_enabled && (
+                    <div className="space-y-2 pl-4 border-l-2 border-muted">
+                      <Label>Reminder frequency</Label>
+                      <Select
+                        value={autoSettings.reminder_frequency}
+                        onValueChange={(v) => setAutoSettings(prev => ({ ...prev, reminder_frequency: v as "monthly" | "quarterly" }))}
+                      >
+                        <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  <Button onClick={saveAutomation} disabled={savingAuto} className="bg-teal-600 hover:bg-teal-700">
+                    <Save className="mr-2 h-4 w-4" /> {savingAuto ? "Saving..." : "Save Automation Settings"}
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

@@ -20,6 +20,26 @@ import {
   RewardRedeemedEmail,
   getRewardRedeemedSubject,
 } from "./templates/RewardRedeemedEmail";
+import {
+  InactivityEmail,
+  getInactivitySubject,
+} from "./templates/InactivityEmail";
+import {
+  PointsCloseToRewardEmail,
+  getPointsCloseToRewardSubject,
+} from "./templates/PointsCloseToRewardEmail";
+import {
+  ReferralNudgeEmail,
+  getReferralNudgeSubject,
+} from "./templates/ReferralNudgeEmail";
+import {
+  MilestoneEmail,
+  getMilestoneSubject,
+} from "./templates/MilestoneEmail";
+import {
+  MonthlyReminderEmail,
+  getMonthlyReminderSubject,
+} from "./templates/MonthlyReminderEmail";
 import type { BrandingProps } from "./templates/types";
 import type { ReferralStatus, LoyaltyTier } from "@/lib/types";
 
@@ -54,9 +74,45 @@ interface TemplateMap {
     remainingBalance: number;
     dashboardUrl: string;
   } & BrandingProps;
+  inactivity: {
+    customerName: string;
+    pointsBalance: number;
+    daysSinceActivity: number;
+    severity: "mild" | "urgent";
+    dashboardUrl: string;
+  } & BrandingProps;
+  points_close_to_reward: {
+    customerName: string;
+    currentPoints: number;
+    rewardName: string;
+    rewardCost: number;
+    pointsNeeded: number;
+    rewardsUrl: string;
+  } & BrandingProps;
+  referral_nudge: {
+    customerName: string;
+    referralName: string;
+    daysPending: number;
+    dashboardUrl: string;
+  } & BrandingProps;
+  milestone: {
+    customerName: string;
+    milestoneCount: number;
+    bonusPoints: number;
+    totalPoints: number;
+    dashboardUrl: string;
+  } & BrandingProps;
+  monthly_reminder: {
+    customerName: string;
+    totalPoints: number;
+    pointsEarnedThisMonth: number;
+    referralsThisMonth: number;
+    availableRewards: { name: string; pointsRequired: number }[];
+    dashboardUrl: string;
+  } & BrandingProps;
 }
 
-type TemplateName = keyof TemplateMap;
+export type TemplateName = keyof TemplateMap;
 
 // Template → notification preference key mapping
 const PREF_KEY_MAP: Record<TemplateName, keyof NotificationPreferences | null> =
@@ -65,6 +121,11 @@ const PREF_KEY_MAP: Record<TemplateName, keyof NotificationPreferences | null> =
     referral_status: "referral_status",
     points_earned: "points_earned",
     reward_redeemed: "reward_fulfilled",
+    inactivity: "weekly_summary",
+    points_close_to_reward: "weekly_summary",
+    referral_nudge: "weekly_summary",
+    milestone: "milestone_reached",
+    monthly_reminder: "weekly_summary",
   };
 
 // ---------- Render helpers ----------
@@ -102,6 +163,41 @@ function renderTemplate<T extends TemplateName>(
         subject: getRewardRedeemedSubject(p.rewardName),
       };
     }
+    case "inactivity": {
+      const p = props as TemplateMap["inactivity"];
+      return {
+        element: React.createElement(InactivityEmail, p),
+        subject: getInactivitySubject(p.customerName, p.severity),
+      };
+    }
+    case "points_close_to_reward": {
+      const p = props as TemplateMap["points_close_to_reward"];
+      return {
+        element: React.createElement(PointsCloseToRewardEmail, p),
+        subject: getPointsCloseToRewardSubject(p.pointsNeeded, p.rewardName),
+      };
+    }
+    case "referral_nudge": {
+      const p = props as TemplateMap["referral_nudge"];
+      return {
+        element: React.createElement(ReferralNudgeEmail, p),
+        subject: getReferralNudgeSubject(p.referralName),
+      };
+    }
+    case "milestone": {
+      const p = props as TemplateMap["milestone"];
+      return {
+        element: React.createElement(MilestoneEmail, p),
+        subject: getMilestoneSubject(p.milestoneCount),
+      };
+    }
+    case "monthly_reminder": {
+      const p = props as TemplateMap["monthly_reminder"];
+      return {
+        element: React.createElement(MonthlyReminderEmail, p),
+        subject: getMonthlyReminderSubject(p.companyName),
+      };
+    }
     default:
       throw new Error(`Unknown template: ${template}`);
   }
@@ -119,6 +215,7 @@ interface SendOptions<T extends TemplateName> {
   customerId: string | null;
   preferences: NotificationPreferences | null;
   adminClient: SupabaseClient;
+  subjectOverride?: string;
 }
 
 export async function sendTransactionalEmail<T extends TemplateName>({
@@ -129,6 +226,7 @@ export async function sendTransactionalEmail<T extends TemplateName>({
   customerId,
   preferences,
   adminClient,
+  subjectOverride,
 }: SendOptions<T>): Promise<{ success: boolean; skipped?: boolean }> {
   // 1. Check preferences
   const prefKey = PREF_KEY_MAP[template];
@@ -147,13 +245,14 @@ export async function sendTransactionalEmail<T extends TemplateName>({
   try {
     // 2. Render React Email → HTML
     const { element, subject } = renderTemplate(template, props);
+    const finalSubject = subjectOverride || subject;
     const html = await render(element);
 
     // 3. Send via Resend
     await resend.emails.send({
       from: "Connect Reward <notifications@connectreward.io>",
       to,
-      subject,
+      subject: finalSubject,
       html,
     });
 
@@ -164,7 +263,7 @@ export async function sendTransactionalEmail<T extends TemplateName>({
       template_name: template,
       recipient_email: to,
       status: "sent",
-      metadata: { subject },
+      metadata: { subject: finalSubject },
     });
 
     return { success: true };
