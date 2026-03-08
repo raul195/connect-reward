@@ -1,0 +1,209 @@
+import { Resend } from "resend";
+import { render } from "@react-email/render";
+import * as React from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { NotificationPreferences } from "@/lib/types";
+
+import {
+  WelcomeEmail,
+  getWelcomeSubject,
+} from "./templates/WelcomeEmail";
+import {
+  ReferralStatusEmail,
+  getReferralStatusSubject,
+} from "./templates/ReferralStatusEmail";
+import {
+  PointsEarnedEmail,
+  getPointsEarnedSubject,
+} from "./templates/PointsEarnedEmail";
+import {
+  RewardRedeemedEmail,
+  getRewardRedeemedSubject,
+} from "./templates/RewardRedeemedEmail";
+import type { BrandingProps } from "./templates/types";
+import type { ReferralStatus, LoyaltyTier } from "@/lib/types";
+
+// ---------- Template definitions ----------
+
+interface TemplateMap {
+  welcome: {
+    customerName: string;
+    dashboardUrl: string;
+  } & BrandingProps;
+  referral_status: {
+    customerName: string;
+    referralName: string;
+    newStatus: ReferralStatus;
+    currentPoints: number;
+    dashboardUrl: string;
+  } & BrandingProps;
+  points_earned: {
+    customerName: string;
+    pointsEarned: number;
+    reason: string;
+    totalPoints: number;
+    tier: LoyaltyTier;
+    nextTier: LoyaltyTier | null;
+    pointsToNextTier: number | null;
+    rewardsUrl: string;
+  } & BrandingProps;
+  reward_redeemed: {
+    customerName: string;
+    rewardName: string;
+    pointsSpent: number;
+    remainingBalance: number;
+    dashboardUrl: string;
+  } & BrandingProps;
+}
+
+type TemplateName = keyof TemplateMap;
+
+// Template → notification preference key mapping
+const PREF_KEY_MAP: Record<TemplateName, keyof NotificationPreferences | null> =
+  {
+    welcome: null, // transactional, cannot opt out
+    referral_status: "referral_status",
+    points_earned: "points_earned",
+    reward_redeemed: "reward_fulfilled",
+  };
+
+// ---------- Render helpers ----------
+
+function renderTemplate<T extends TemplateName>(
+  template: T,
+  props: TemplateMap[T]
+): { element: React.ReactElement; subject: string } {
+  switch (template) {
+    case "welcome": {
+      const p = props as TemplateMap["welcome"];
+      return {
+        element: React.createElement(WelcomeEmail, p),
+        subject: getWelcomeSubject(p.companyName),
+      };
+    }
+    case "referral_status": {
+      const p = props as TemplateMap["referral_status"];
+      return {
+        element: React.createElement(ReferralStatusEmail, p),
+        subject: getReferralStatusSubject(p.referralName, p.newStatus),
+      };
+    }
+    case "points_earned": {
+      const p = props as TemplateMap["points_earned"];
+      return {
+        element: React.createElement(PointsEarnedEmail, p),
+        subject: getPointsEarnedSubject(p.pointsEarned),
+      };
+    }
+    case "reward_redeemed": {
+      const p = props as TemplateMap["reward_redeemed"];
+      return {
+        element: React.createElement(RewardRedeemedEmail, p),
+        subject: getRewardRedeemedSubject(p.rewardName),
+      };
+    }
+    default:
+      throw new Error(`Unknown template: ${template}`);
+  }
+}
+
+// ---------- Public API ----------
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+interface SendOptions<T extends TemplateName> {
+  template: T;
+  to: string;
+  props: TemplateMap[T];
+  companyId: string;
+  customerId: string | null;
+  preferences: NotificationPreferences | null;
+  adminClient: SupabaseClient;
+}
+
+export async function sendTransactionalEmail<T extends TemplateName>({
+  template,
+  to,
+  props,
+  companyId,
+  customerId,
+  preferences,
+  adminClient,
+}: SendOptions<T>): Promise<{ success: boolean; skipped?: boolean }> {
+  // 1. Check preferences
+  const prefKey = PREF_KEY_MAP[template];
+  if (prefKey && preferences && preferences[prefKey] === false) {
+    logEmail(adminClient, {
+      company_id: companyId,
+      customer_id: customerId,
+      template_name: template,
+      recipient_email: to,
+      status: "skipped",
+      metadata: { reason: "preference_disabled", prefKey },
+    });
+    return { success: true, skipped: true };
+  }
+
+  try {
+    // 2. Render React Email → HTML
+    const { element, subject } = renderTemplate(template, props);
+    const html = await render(element);
+
+    // 3. Send via Resend
+    await resend.emails.send({
+      from: "Connect Reward <notifications@connectreward.io>",
+      to,
+      subject,
+      html,
+    });
+
+    // 4. Log success
+    logEmail(adminClient, {
+      company_id: companyId,
+      customer_id: customerId,
+      template_name: template,
+      recipient_email: to,
+      status: "sent",
+      metadata: { subject },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error(`Email send failed [${template}]:`, error);
+
+    // Log failure
+    logEmail(adminClient, {
+      company_id: companyId,
+      customer_id: customerId,
+      template_name: template,
+      recipient_email: to,
+      status: "failed",
+      metadata: {
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+
+    return { success: false };
+  }
+}
+
+// ---------- Logging (fire-and-forget, never throws) ----------
+
+async function logEmail(
+  adminClient: SupabaseClient,
+  row: {
+    company_id: string;
+    customer_id: string | null;
+    template_name: string;
+    recipient_email: string;
+    status: string;
+    metadata: Record<string, unknown>;
+  }
+) {
+  try {
+    const { error } = await adminClient.from("email_logs").insert(row);
+    if (error) console.error("Email log insert failed:", error.message);
+  } catch {
+    // Silently swallow — logging should never break the app
+  }
+}

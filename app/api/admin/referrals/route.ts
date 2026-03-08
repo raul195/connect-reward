@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthContext, requireAdmin } from "@/lib/api-helpers";
 import { awardReferralCompletion } from "@/lib/points";
+import { sendTransactionalEmail } from "@/lib/email/sendEmail";
 
 export async function GET(request: Request) {
   try {
@@ -114,6 +115,43 @@ export async function PUT(request: Request) {
           title: "Referral Status Updated",
           body: `Your referral for ${referral.referral_name} has been updated to: ${status.replace(/_/g, " ")}`,
         });
+
+        // Send referral status email (fire-and-forget)
+        const { data: customer } = await admin
+          .from("profiles")
+          .select("email, full_name, total_points, notification_preferences")
+          .eq("id", referral.submitted_by)
+          .single();
+
+        const { data: companyData } = await admin
+          .from("companies")
+          .select("name, logo_url, settings")
+          .eq("id", cid)
+          .single();
+
+        if (customer && companyData) {
+          const settings = (companyData.settings ?? {}) as Record<string, unknown>;
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io";
+
+          sendTransactionalEmail({
+            template: "referral_status",
+            to: customer.email,
+            props: {
+              customerName: customer.full_name,
+              referralName: referral.referral_name,
+              newStatus: status,
+              currentPoints: customer.total_points,
+              dashboardUrl: `${baseUrl}/dashboard`,
+              companyName: companyData.name,
+              logoUrl: companyData.logo_url,
+              primaryColor: (settings.brandColor as string) || "#6366f1",
+            },
+            companyId: cid,
+            customerId: referral.submitted_by,
+            preferences: customer.notification_preferences,
+            adminClient: admin,
+          }).catch(() => {});
+        }
       }
     }
 

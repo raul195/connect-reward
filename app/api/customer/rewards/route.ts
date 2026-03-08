@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/api-helpers";
+import { sendTransactionalEmail } from "@/lib/email/sendEmail";
 
 export async function GET() {
   const result = await getAuthContext();
@@ -103,6 +104,37 @@ export async function POST(request: NextRequest) {
       { error: "Points deducted but profile update failed: " + updateError.message },
       { status: 500 }
     );
+  }
+
+  // Send reward redeemed email (fire-and-forget)
+  const { data: companyData } = await admin
+    .from("companies")
+    .select("name, logo_url, settings")
+    .eq("id", profile.company_id!)
+    .single();
+
+  if (companyData) {
+    const settings = (companyData.settings ?? {}) as Record<string, unknown>;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io";
+
+    sendTransactionalEmail({
+      template: "reward_redeemed",
+      to: profile.email,
+      props: {
+        customerName: profile.full_name,
+        rewardName: reward.name,
+        pointsSpent: reward.points_required,
+        remainingBalance: profile.total_points - reward.points_required,
+        dashboardUrl: `${baseUrl}/dashboard`,
+        companyName: companyData.name,
+        logoUrl: companyData.logo_url,
+        primaryColor: (settings.brandColor as string) || "#6366f1",
+      },
+      companyId: profile.company_id!,
+      customerId: profile.id,
+      preferences: profile.notification_preferences,
+      adminClient: admin,
+    }).catch(() => {});
   }
 
   return NextResponse.json({ success: true });

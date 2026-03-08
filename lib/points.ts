@@ -1,5 +1,6 @@
 import type { LoyaltyTier } from "./types";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sendTransactionalEmail } from "./email/sendEmail";
 
 export const TIER_THRESHOLDS: Record<LoyaltyTier, number> = {
   bronze: 0,
@@ -163,6 +164,47 @@ export async function awardReferralCompletion(
     title: "Referral Complete!",
     body: `Your referral for ${referral.referral_name}'s installation is complete! +${basePoints} points earned.`,
   });
+
+  // 8. Send points earned email (fire-and-forget)
+  const { data: customerProfile } = await supabase
+    .from("profiles")
+    .select("email, full_name, notification_preferences")
+    .eq("id", profile.id)
+    .single();
+
+  const { data: companyBranding } = await supabase
+    .from("companies")
+    .select("name, logo_url, settings")
+    .eq("id", referral.company_id)
+    .single();
+
+  if (customerProfile && companyBranding) {
+    const compSettings = (companyBranding.settings ?? {}) as Record<string, unknown>;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io";
+    const tierProgress = getPointsToNextTier(newTotal);
+
+    sendTransactionalEmail({
+      template: "points_earned",
+      to: customerProfile.email,
+      props: {
+        customerName: customerProfile.full_name,
+        pointsEarned: totalAwarded,
+        reason: `Referral completed: ${referral.referral_name}`,
+        totalPoints: newTotal,
+        tier: newTier,
+        nextTier: tierProgress?.nextTier ?? null,
+        pointsToNextTier: tierProgress?.pointsNeeded ?? null,
+        rewardsUrl: `${baseUrl}/dashboard/rewards`,
+        companyName: companyBranding.name,
+        logoUrl: companyBranding.logo_url,
+        primaryColor: (compSettings.brandColor as string) || "#6366f1",
+      },
+      companyId: referral.company_id,
+      customerId: profile.id,
+      preferences: customerProfile.notification_preferences,
+      adminClient: supabase,
+    }).catch(() => {});
+  }
 }
 
 /** Manually adjust a customer's points */
@@ -206,6 +248,49 @@ export async function manualPointAdjustment(
     title: amount > 0 ? "Points Awarded" : "Points Adjusted",
     body: `${amount > 0 ? "+" : ""}${amount} points: ${reason || "Manual adjustment"}`,
   });
+
+  // 4. Send points earned email (fire-and-forget, only for positive adjustments)
+  if (amount > 0) {
+    const { data: customerData } = await supabase
+      .from("profiles")
+      .select("email, full_name, notification_preferences")
+      .eq("id", userId)
+      .single();
+
+    const { data: companyBranding } = await supabase
+      .from("companies")
+      .select("name, logo_url, settings")
+      .eq("id", companyId)
+      .single();
+
+    if (customerData && companyBranding) {
+      const compSettings = (companyBranding.settings ?? {}) as Record<string, unknown>;
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io";
+      const tierProgress = getPointsToNextTier(newTotal);
+
+      sendTransactionalEmail({
+        template: "points_earned",
+        to: customerData.email,
+        props: {
+          customerName: customerData.full_name,
+          pointsEarned: amount,
+          reason: reason || "Manual adjustment",
+          totalPoints: newTotal,
+          tier: newTier,
+          nextTier: tierProgress?.nextTier ?? null,
+          pointsToNextTier: tierProgress?.pointsNeeded ?? null,
+          rewardsUrl: `${baseUrl}/dashboard/rewards`,
+          companyName: companyBranding.name,
+          logoUrl: companyBranding.logo_url,
+          primaryColor: (compSettings.brandColor as string) || "#6366f1",
+        },
+        companyId,
+        customerId: userId,
+        preferences: customerData.notification_preferences,
+        adminClient: supabase,
+      }).catch(() => {});
+    }
+  }
 }
 
 /** Award review points after contractor verifies */
@@ -262,4 +347,48 @@ export async function awardReviewPoints(
     title: "Review Verified!",
     body: `Your review has been verified. +${reviewPts} points earned!`,
   });
+
+  // Send points earned email (fire-and-forget)
+  if (profile) {
+    const { data: customerData } = await supabase
+      .from("profiles")
+      .select("email, full_name, notification_preferences")
+      .eq("id", review.user_id)
+      .single();
+
+    const { data: companyBranding } = await supabase
+      .from("companies")
+      .select("name, logo_url, settings")
+      .eq("id", review.company_id)
+      .single();
+
+    if (customerData && companyBranding) {
+      const compSettings = (companyBranding.settings ?? {}) as Record<string, unknown>;
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io";
+      const updatedTotal = profile.total_points + reviewPts;
+      const tierProgress = getPointsToNextTier(updatedTotal);
+
+      sendTransactionalEmail({
+        template: "points_earned",
+        to: customerData.email,
+        props: {
+          customerName: customerData.full_name,
+          pointsEarned: reviewPts,
+          reason: "Review verified",
+          totalPoints: updatedTotal,
+          tier: calculateTierFromPoints(updatedTotal),
+          nextTier: tierProgress?.nextTier ?? null,
+          pointsToNextTier: tierProgress?.pointsNeeded ?? null,
+          rewardsUrl: `${baseUrl}/dashboard/rewards`,
+          companyName: companyBranding.name,
+          logoUrl: companyBranding.logo_url,
+          primaryColor: (compSettings.brandColor as string) || "#6366f1",
+        },
+        companyId: review.company_id,
+        customerId: review.user_id,
+        preferences: customerData.notification_preferences,
+        adminClient: supabase,
+      }).catch(() => {});
+    }
+  }
 }

@@ -9,6 +9,7 @@ import {
   isValidZipCode,
 } from "@/lib/validation";
 import type { PlanTier } from "@/lib/types";
+import { sendTransactionalEmail } from "@/lib/email/sendEmail";
 
 export async function POST(request: NextRequest) {
   // 1. Authenticate the caller via session cookie
@@ -136,6 +137,34 @@ export async function POST(request: NextRequest) {
       { error: "User created but profile update failed: " + updateError.message },
       { status: 500 }
     );
+  }
+
+  // Send welcome email (fire-and-forget)
+  const { data: companyData } = await admin
+    .from("companies")
+    .select("name, logo_url, settings")
+    .eq("id", companyId)
+    .single();
+
+  if (companyData) {
+    const settings = (companyData.settings ?? {}) as Record<string, unknown>;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io";
+
+    sendTransactionalEmail({
+      template: "welcome",
+      to: email,
+      props: {
+        customerName: fullName,
+        dashboardUrl: `${baseUrl}/dashboard`,
+        companyName: companyData.name,
+        logoUrl: companyData.logo_url,
+        primaryColor: (settings.brandColor as string) || "#6366f1",
+      },
+      companyId,
+      customerId: newUser.user.id,
+      preferences: null,
+      adminClient: admin,
+    }).catch(() => {});
   }
 
   return NextResponse.json({ id: newUser.user.id }, { status: 201 });

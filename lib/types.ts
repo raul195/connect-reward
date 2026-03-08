@@ -176,6 +176,17 @@ export type CompanySize = "solo" | "2-5" | "6-15" | "16-50" | "50+";
 export type ReferralMethod = "none" | "cash_bonuses" | "gift_cards" | "referral_software" | "word_of_mouth" | "other";
 export type MonthlyVolume = "0" | "1-5" | "6-15" | "16-30" | "30+";
 
+export interface EmailLog {
+  id: string;
+  company_id: string;
+  customer_id: string | null;
+  template_name: string;
+  recipient_email: string;
+  status: "sent" | "failed" | "skipped";
+  metadata: Record<string, unknown>;
+  created_at: string;
+}
+
 export interface EarlyAccessApplication {
   id: string;
   full_name: string;
