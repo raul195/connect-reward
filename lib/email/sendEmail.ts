@@ -205,7 +205,11 @@ function renderTemplate<T extends TemplateName>(
 
 // ---------- Public API ----------
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  return _resend;
+}
 
 interface SendOptions<T extends TemplateName> {
   template: T;
@@ -249,7 +253,7 @@ export async function sendTransactionalEmail<T extends TemplateName>({
     const html = await render(element);
 
     // 3. Send via Resend
-    await resend.emails.send({
+    await getResend().emails.send({
       from: "Connect Reward <notifications@connectreward.io>",
       to,
       subject: finalSubject,
