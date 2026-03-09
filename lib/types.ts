@@ -272,6 +272,15 @@ export interface EmailDraft {
   updated_at: string;
 }
 
+// ── System Health Checks ──
+
+export interface SystemHealthCheck {
+  id: string;
+  status: "healthy" | "degraded" | "down";
+  checks: Record<string, { status: string; latency?: number }>;
+  created_at: string;
+}
+
 // ── Support Tickets ──
 
 export type TicketCategory = "bug" | "account" | "billing" | "feature_request" | "other";
