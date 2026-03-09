@@ -13,8 +13,25 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Camera, Save } from "lucide-react";
+import { Camera, Save, Mail, MailX } from "lucide-react";
 import type { Profile, NotificationPreferences } from "@/lib/types";
+
+interface EmailPrefs {
+  opt_out: boolean;
+  reminders_enabled: boolean;
+  reward_suggestions_enabled: boolean;
+  referral_nudges_enabled: boolean;
+  milestone_emails_enabled: boolean;
+  promotional_emails_enabled: boolean;
+}
+
+const EMAIL_PREF_ITEMS: { key: keyof Omit<EmailPrefs, "opt_out">; label: string; desc: string }[] = [
+  { key: "reminders_enabled", label: "Program Reminders", desc: "Monthly/quarterly recap of your points and rewards" },
+  { key: "reward_suggestions_enabled", label: "Reward Suggestions", desc: "Notifications when you're close to a reward" },
+  { key: "referral_nudges_enabled", label: "Referral Follow-ups", desc: "Updates and encouragement about your referrals" },
+  { key: "milestone_emails_enabled", label: "Milestone Celebrations", desc: "Congrats when you hit referral milestones" },
+  { key: "promotional_emails_enabled", label: "Re-engagement Emails", desc: "Check-in emails if you haven't visited in a while" },
+];
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -31,6 +48,15 @@ export default function ProfilePage() {
     weekly_summary: true,
   });
   const [savingPrefs, setSavingPrefs] = useState(false);
+  const [emailPrefs, setEmailPrefs] = useState<EmailPrefs>({
+    opt_out: false,
+    reminders_enabled: true,
+    reward_suggestions_enabled: true,
+    referral_nudges_enabled: true,
+    milestone_emails_enabled: true,
+    promotional_emails_enabled: true,
+  });
+  const [savingEmailPrefs, setSavingEmailPrefs] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -61,9 +87,22 @@ export default function ProfilePage() {
     setLoading(false);
   }, []);
 
+  const fetchEmailPrefs = useCallback(async () => {
+    try {
+      const res = await fetch("/api/customer/email-preferences");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.preferences) setEmailPrefs(data.preferences);
+      }
+    } catch {
+      // silent fail
+    }
+  }, []);
+
   useEffect(() => {
     fetchProfile();
-  }, [fetchProfile]);
+    fetchEmailPrefs();
+  }, [fetchProfile, fetchEmailPrefs]);
 
   async function handleSave() {
     if (!profile) return;
@@ -108,6 +147,52 @@ export default function ProfilePage() {
       toast.error("Failed to save notification preferences.");
     }
     setSavingPrefs(false);
+  }
+
+  async function handleSaveEmailPrefs() {
+    if (!profile) return;
+    setSavingEmailPrefs(true);
+
+    try {
+      const res = await fetch("/api/customer/email-preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(emailPrefs),
+      });
+
+      if (!res.ok) {
+        toast.error("Failed to save email preferences.");
+      } else {
+        toast.success("Email preferences updated!");
+        fetchEmailPrefs();
+      }
+    } catch {
+      toast.error("Failed to save email preferences.");
+    }
+    setSavingEmailPrefs(false);
+  }
+
+  async function handleUnsubscribeAll() {
+    if (!profile) return;
+    setSavingEmailPrefs(true);
+
+    try {
+      const res = await fetch("/api/customer/email-preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ opt_out: true }),
+      });
+
+      if (!res.ok) {
+        toast.error("Failed to update email preferences.");
+      } else {
+        toast.success("Unsubscribed from all engagement emails.");
+        fetchEmailPrefs();
+      }
+    } catch {
+      toast.error("Failed to update email preferences.");
+    }
+    setSavingEmailPrefs(false);
   }
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -301,6 +386,84 @@ export default function ProfilePage() {
             <Save className="mr-2 h-4 w-4" />
             {savingPrefs ? "Saving..." : "Save Preferences"}
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Email Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Email Preferences
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Control which engagement emails you receive. Service emails (referral updates, points confirmations, reward fulfillment) cannot be disabled.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {emailPrefs.opt_out && (
+            <div className="rounded-md bg-amber-50 border border-amber-200 p-3 flex items-center gap-2">
+              <MailX className="h-4 w-4 text-amber-600 shrink-0" />
+              <p className="text-sm text-amber-800">You are currently unsubscribed from all engagement emails.</p>
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Service Emails (Always On)</p>
+            <p className="text-xs text-muted-foreground">Referral status updates, points earned, reward fulfillment, and welcome emails are always delivered.</p>
+          </div>
+
+          <Separator />
+
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Engagement Emails</p>
+
+          {EMAIL_PREF_ITEMS.map((item) => (
+            <div key={item.key}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">{item.label}</p>
+                  <p className="text-xs text-muted-foreground">{item.desc}</p>
+                </div>
+                <Switch
+                  checked={emailPrefs[item.key]}
+                  onCheckedChange={(v) => setEmailPrefs((p) => ({ ...p, [item.key]: v, opt_out: false }))}
+                  disabled={savingEmailPrefs}
+                />
+              </div>
+              <Separator className="mt-3" />
+            </div>
+          ))}
+
+          <div className="flex flex-col gap-2 pt-1">
+            <Button onClick={handleSaveEmailPrefs} disabled={savingEmailPrefs} className="bg-teal-600 hover:bg-teal-700">
+              <Save className="mr-2 h-4 w-4" />
+              {savingEmailPrefs ? "Saving..." : "Save Email Preferences"}
+            </Button>
+            {!emailPrefs.opt_out ? (
+              <Button variant="outline" onClick={handleUnsubscribeAll} disabled={savingEmailPrefs} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                <MailX className="mr-2 h-4 w-4" />
+                Unsubscribe from All Engagement Emails
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEmailPrefs({
+                    opt_out: false,
+                    reminders_enabled: true,
+                    reward_suggestions_enabled: true,
+                    referral_nudges_enabled: true,
+                    milestone_emails_enabled: true,
+                    promotional_emails_enabled: true,
+                  });
+                }}
+                disabled={savingEmailPrefs}
+                className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+              >
+                Re-enable All Engagement Emails
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

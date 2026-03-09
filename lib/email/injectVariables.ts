@@ -20,6 +20,7 @@ const FALLBACKS: Record<string, string> = {
   daysPending: "several",
   totalPoints: "your",
   periodLabel: "monthly",
+  unsubscribeUrl: "#",
 };
 
 /**
@@ -52,7 +53,12 @@ export function textToHtml(text: string): string {
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
-        .replace(/\n/g, "<br>");
+        .replace(/\n/g, "<br>")
+        // Auto-link bare URLs
+        .replace(
+          /(https?:\/\/[^\s<]+)/g,
+          '<a href="$1" style="color:#0D9488;text-decoration:underline;">$1</a>'
+        );
       return `<p style="margin:0 0 16px 0;line-height:1.6;color:#333333;">${inner}</p>`;
     })
     .join("\n");

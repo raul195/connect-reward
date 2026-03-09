@@ -14,7 +14,7 @@ export type TriggerTemplates = {
 };
 
 const CAN_SPAM =
-  "This email was sent by {{businessName}}. Manage your preferences in your dashboard.";
+  "This email was sent by {{businessName}}. Manage your email preferences: {{unsubscribeUrl}}";
 
 export const TEMPLATE_LIBRARY: Record<AutomationTriggerType, TriggerTemplates> =
   {

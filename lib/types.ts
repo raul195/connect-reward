@@ -187,6 +187,22 @@ export interface EmailLog {
   created_at: string;
 }
 
+// ── Email Preferences ──
+
+export interface EmailPreferences {
+  id: string;
+  customer_id: string;
+  unsubscribe_token: string;
+  opt_out: boolean;
+  reminders_enabled: boolean;
+  reward_suggestions_enabled: boolean;
+  referral_nudges_enabled: boolean;
+  milestone_emails_enabled: boolean;
+  promotional_emails_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // ── Email Automation Phase 2 & 3 ──
 
 export type TonePreference = "friendly" | "professional" | "motivational";

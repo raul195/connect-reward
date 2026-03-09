@@ -3,6 +3,18 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { AutomationTriggerType, TonePreference } from "@/lib/types";
 import { selectTemplate } from "@/lib/email/selectTemplate";
 import { injectVariables, textToHtml } from "@/lib/email/injectVariables";
+import { ensureEmailPreferences } from "@/lib/email/ensureEmailPreferences";
+
+// Maps trigger types to the email_preferences column that controls them.
+// If a trigger isn't here, no per-trigger preference check is applied (only opt_out).
+const TRIGGER_PREF_MAP: Partial<Record<AutomationTriggerType, string>> = {
+  inactivity_30: "promotional_emails_enabled",
+  inactivity_60: "promotional_emails_enabled",
+  points_close_to_reward: "reward_suggestions_enabled",
+  referral_nudge: "referral_nudges_enabled",
+  milestone_reached: "milestone_emails_enabled",
+  program_reminder: "reminders_enabled",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -134,8 +146,10 @@ async function processAutomations() {
             if (!inactiveCustomers) break;
 
             for (const customer of inactiveCustomers) {
-              const prefs = customer.notification_preferences as Record<string, boolean> | null;
-              if (prefs && prefs.weekly_summary === false) continue;
+              const emailPrefs = await ensureEmailPreferences(customer.id, admin);
+              if (emailPrefs.opt_out) continue;
+              const prefKey = TRIGGER_PREF_MAP[triggerType];
+              if (prefKey && !emailPrefs[prefKey as keyof typeof emailPrefs]) continue;
 
               const isDuplicate = await checkDuplicate(admin, company.id, customer.id, triggerType);
               if (isDuplicate) continue;
@@ -144,11 +158,16 @@ async function processAutomations() {
                 triggerType, tonePreference, customer.id, admin, company.id
               );
 
+              const unsubscribeUrl = emailPrefs.unsubscribe_token
+                ? `${appUrl}/unsubscribe?token=${emailPrefs.unsubscribe_token}`
+                : `${appUrl}/unsubscribe`;
+
               const varData: Record<string, string | number> = {
                 customerName: customer.full_name,
                 businessName: company.name,
                 pointsBalance: customer.total_points,
                 dashboardUrl: `${appUrl}/dashboard`,
+                unsubscribeUrl,
               };
 
               const subject = injectVariables(template.subject, varData);
@@ -200,9 +219,6 @@ async function processAutomations() {
             if (!customers || !rewards || rewards.length === 0) break;
 
             for (const customer of customers) {
-              const prefs = customer.notification_preferences as Record<string, boolean> | null;
-              if (prefs && prefs.weekly_summary === false) continue;
-
               const availablePoints = customer.total_points - customer.redeemed_points;
 
               // Find cheapest reward they can't quite afford
@@ -215,12 +231,21 @@ async function processAutomations() {
               const threshold = targetReward.points_required * 0.2;
               if (pointsNeeded > threshold) continue;
 
+              const emailPrefs = await ensureEmailPreferences(customer.id, admin);
+              if (emailPrefs.opt_out) continue;
+              const prefKey = TRIGGER_PREF_MAP[triggerType];
+              if (prefKey && !emailPrefs[prefKey as keyof typeof emailPrefs]) continue;
+
               const isDuplicate = await checkDuplicate(admin, company.id, customer.id, triggerType);
               if (isDuplicate) continue;
 
               const { template, variationIndex, tone } = await selectTemplate(
                 triggerType, tonePreference, customer.id, admin, company.id
               );
+
+              const unsubscribeUrl = emailPrefs.unsubscribe_token
+                ? `${appUrl}/unsubscribe?token=${emailPrefs.unsubscribe_token}`
+                : `${appUrl}/unsubscribe`;
 
               const varData: Record<string, string | number> = {
                 customerName: customer.full_name,
@@ -229,6 +254,7 @@ async function processAutomations() {
                 pointsNeeded,
                 rewardName: targetReward.name,
                 rewardCatalogUrl: `${appUrl}/dashboard/rewards`,
+                unsubscribeUrl,
               };
 
               const subject = injectVariables(template.subject, varData);
@@ -285,8 +311,10 @@ async function processAutomations() {
 
               if (!submitter) continue;
 
-              const prefs = submitter.notification_preferences as Record<string, boolean> | null;
-              if (prefs && prefs.weekly_summary === false) continue;
+              const emailPrefs = await ensureEmailPreferences(submitter.id, admin);
+              if (emailPrefs.opt_out) continue;
+              const prefKey = TRIGGER_PREF_MAP[triggerType];
+              if (prefKey && !emailPrefs[prefKey as keyof typeof emailPrefs]) continue;
 
               const isDuplicate = await checkDuplicate(admin, company.id, submitter.id, triggerType);
               if (isDuplicate) continue;
@@ -299,12 +327,17 @@ async function processAutomations() {
                 triggerType, tonePreference, submitter.id, admin, company.id
               );
 
+              const unsubscribeUrl = emailPrefs.unsubscribe_token
+                ? `${appUrl}/unsubscribe?token=${emailPrefs.unsubscribe_token}`
+                : `${appUrl}/unsubscribe`;
+
               const varData: Record<string, string | number> = {
                 customerName: submitter.full_name,
                 businessName: company.name,
                 referralName: referral.referral_name,
                 daysPending,
                 referralSubmitUrl: `${appUrl}/dashboard/referrals`,
+                unsubscribeUrl,
               };
 
               const subject = injectVariables(template.subject, varData);
@@ -354,8 +387,10 @@ async function processAutomations() {
               // Check if referral count is exactly at a milestone
               if (customer.referral_count % milestoneThreshold !== 0) continue;
 
-              const prefs = customer.notification_preferences as Record<string, boolean> | null;
-              if (prefs && prefs.milestone_reached === false) continue;
+              const emailPrefs = await ensureEmailPreferences(customer.id, admin);
+              if (emailPrefs.opt_out) continue;
+              const prefKey = TRIGGER_PREF_MAP[triggerType];
+              if (prefKey && !emailPrefs[prefKey as keyof typeof emailPrefs]) continue;
 
               const isDuplicate = await checkDuplicate(admin, company.id, customer.id, triggerType);
               if (isDuplicate) continue;
@@ -364,6 +399,10 @@ async function processAutomations() {
                 triggerType, tonePreference, customer.id, admin, company.id
               );
 
+              const unsubscribeUrl = emailPrefs.unsubscribe_token
+                ? `${appUrl}/unsubscribe?token=${emailPrefs.unsubscribe_token}`
+                : `${appUrl}/unsubscribe`;
+
               const varData: Record<string, string | number> = {
                 customerName: customer.full_name,
                 businessName: company.name,
@@ -371,6 +410,7 @@ async function processAutomations() {
                 bonusPoints: milestoneBonus,
                 totalPoints: customer.total_points,
                 dashboardUrl: `${appUrl}/dashboard`,
+                unsubscribeUrl,
               };
 
               const subject = injectVariables(template.subject, varData);
@@ -435,8 +475,10 @@ async function processAutomations() {
             const monthEnd = new Date(now.getFullYear(), now.getMonth(), 1);
 
             for (const customer of customers) {
-              const prefs = customer.notification_preferences as Record<string, boolean> | null;
-              if (prefs && prefs.weekly_summary === false) continue;
+              const emailPrefs = await ensureEmailPreferences(customer.id, admin);
+              if (emailPrefs.opt_out) continue;
+              const prefKey = TRIGGER_PREF_MAP[triggerType];
+              if (prefKey && !emailPrefs[prefKey as keyof typeof emailPrefs]) continue;
 
               const isDuplicate = await checkDuplicate(admin, company.id, customer.id, triggerType);
               if (isDuplicate) continue;
@@ -477,12 +519,17 @@ async function processAutomations() {
                 triggerType, tonePreference, customer.id, admin, company.id
               );
 
+              const unsubscribeUrl = emailPrefs.unsubscribe_token
+                ? `${appUrl}/unsubscribe?token=${emailPrefs.unsubscribe_token}`
+                : `${appUrl}/unsubscribe`;
+
               const varData: Record<string, string | number> = {
                 customerName: customer.full_name,
                 businessName: company.name,
                 totalPoints: customer.total_points,
                 periodLabel,
                 dashboardUrl: `${appUrl}/dashboard`,
+                unsubscribeUrl,
               };
 
               const subject = injectVariables(template.subject, varData);

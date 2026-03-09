@@ -97,6 +97,7 @@ const SAMPLE_DATA: Record<string, string | number> = {
   bonusPoints: 500,
   totalPoints: 3750,
   periodLabel: "monthly",
+  unsubscribeUrl: "https://example.com/unsubscribe?token=example",
 };
 
 // Transactional email definitions (no template library — display only)
@@ -386,6 +387,8 @@ export default function EmailsPage() {
     Record<string, boolean>
   >({});
   const [templatesSubTab, setTemplatesSubTab] = useState<"library" | "drip">("library");
+  const [templateTone, setTemplateTone] = useState<TonePreference>("friendly");
+  const [activeTone, setActiveTone] = useState<TonePreference>("friendly");
 
   const fetchDrafts = useCallback(async () => {
     if (!profile?.company_id) return;
@@ -433,6 +436,13 @@ export default function EmailsPage() {
           states[trigger.trigger_type] = trigger.is_active;
         }
         setTriggerStates(states);
+
+        // Get the active tone from automation settings
+        if (data.settings?.tone_preference) {
+          const tone = data.settings.tone_preference as TonePreference;
+          setActiveTone(tone);
+          setTemplateTone(tone);
+        }
       }
     } catch {
       // ignore
@@ -1109,9 +1119,33 @@ export default function EmailsPage() {
                     </div>
                     <p className="text-sm text-muted-foreground">
                       These emails are triggered by customer behavior and can be
-                      toggled on or off. Each has 3 tone variations with 3
-                      templates each.
+                      toggled on or off. Select a tone to view its 3 variations per trigger.
                     </p>
+
+                    {/* Tone selector */}
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className="text-sm font-medium text-muted-foreground">Tone:</span>
+                      {TONES.map((tone) => (
+                        <Button
+                          key={tone}
+                          variant={templateTone === tone ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setTemplateTone(tone)}
+                          className={
+                            templateTone === tone
+                              ? "bg-teal-600 hover:bg-teal-700"
+                              : ""
+                          }
+                        >
+                          <span className="capitalize">{tone}</span>
+                          {tone === activeTone && (
+                            <span className="ml-1.5 inline-flex items-center rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-medium">
+                              Active
+                            </span>
+                          )}
+                        </Button>
+                      ))}
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-6">
@@ -1155,111 +1189,104 @@ export default function EmailsPage() {
                             </div>
                           </div>
 
-                          {/* Variations per tone */}
-                          <div className="p-4 space-y-4">
-                            {TONES.map((tone) => (
-                              <div key={tone}>
-                                <p className="text-sm font-medium capitalize mb-2">
-                                  {tone} tone
-                                </p>
-                                <div className="space-y-2 pl-2 border-l-2 border-muted">
-                                  {[0, 1, 2].map((vi) => {
-                                    const tmpl = getEffectiveTemplate(
-                                      email.triggerType,
-                                      tone,
-                                      vi
-                                    );
-                                    const isCustom = hasCustomOverride(
-                                      email.triggerType,
-                                      tone,
-                                      vi
-                                    );
-                                    return (
-                                      <div
-                                        key={vi}
-                                        className="flex items-start justify-between gap-3 rounded border p-3 bg-muted/30"
-                                      >
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-xs font-medium text-muted-foreground">
-                                              Variation {vi + 1}
-                                            </span>
-                                            {isCustom && (
-                                              <span className="inline-flex items-center rounded-full bg-orange-100 text-orange-800 px-1.5 py-0.5 text-[10px] font-medium">
-                                                Customized
-                                              </span>
-                                            )}
-                                          </div>
-                                          <p className="text-sm font-medium mt-1 truncate">
-                                            {injectVariables(
-                                              tmpl.subject,
-                                              SAMPLE_DATA
-                                            )}
-                                          </p>
-                                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                                            {injectVariables(
-                                              tmpl.body,
-                                              SAMPLE_DATA
-                                            )
-                                              .split("\n")
-                                              .slice(0, 2)
-                                              .join(" ")}
-                                          </p>
-                                        </div>
-                                        <div className="flex items-center gap-1 shrink-0">
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7"
-                                            onClick={() =>
-                                              openTemplatePreview(
-                                                tmpl.subject,
-                                                tmpl.body
-                                              )
-                                            }
-                                            title="Preview"
-                                          >
-                                            <Eye className="h-3.5 w-3.5" />
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7"
-                                            onClick={() =>
-                                              openTemplateEdit(
-                                                email.triggerType,
-                                                tone,
-                                                vi
-                                              )
-                                            }
-                                            title="Edit"
-                                          >
-                                            <Pencil className="h-3.5 w-3.5" />
-                                          </Button>
-                                          {isCustom && (
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="h-7 w-7 text-orange-600"
-                                              onClick={() =>
-                                                resetTemplate(
-                                                  email.triggerType,
-                                                  tone,
-                                                  vi
-                                                )
-                                              }
-                                              title="Reset to default"
-                                            >
-                                              <RotateCcw className="h-3.5 w-3.5" />
-                                            </Button>
-                                          )}
-                                        </div>
+                          {/* Variations for selected tone */}
+                          <div className="p-4">
+                            <div className="space-y-2">
+                              {[0, 1, 2].map((vi) => {
+                                const tmpl = getEffectiveTemplate(
+                                  email.triggerType,
+                                  templateTone,
+                                  vi
+                                );
+                                const isCustom = hasCustomOverride(
+                                  email.triggerType,
+                                  templateTone,
+                                  vi
+                                );
+                                return (
+                                  <div
+                                    key={vi}
+                                    className="flex items-start justify-between gap-3 rounded border p-3 bg-muted/30"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-medium text-muted-foreground">
+                                          Variation {vi + 1}
+                                        </span>
+                                        {isCustom && (
+                                          <span className="inline-flex items-center rounded-full bg-orange-100 text-orange-800 px-1.5 py-0.5 text-[10px] font-medium">
+                                            Customized
+                                          </span>
+                                        )}
                                       </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            ))}
+                                      <p className="text-sm font-medium mt-1 truncate">
+                                        {injectVariables(
+                                          tmpl.subject,
+                                          SAMPLE_DATA
+                                        )}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                                        {injectVariables(
+                                          tmpl.body,
+                                          SAMPLE_DATA
+                                        )
+                                          .split("\n")
+                                          .slice(0, 2)
+                                          .join(" ")}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() =>
+                                          openTemplatePreview(
+                                            tmpl.subject,
+                                            tmpl.body
+                                          )
+                                        }
+                                        title="Preview"
+                                      >
+                                        <Eye className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() =>
+                                          openTemplateEdit(
+                                            email.triggerType,
+                                            templateTone,
+                                            vi
+                                          )
+                                        }
+                                        title="Edit"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5" />
+                                      </Button>
+                                      {isCustom && (
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7 text-orange-600"
+                                          onClick={() =>
+                                            resetTemplate(
+                                              email.triggerType,
+                                              templateTone,
+                                              vi
+                                            )
+                                          }
+                                          title="Reset to default"
+                                        >
+                                          <RotateCcw className="h-3.5 w-3.5" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
                       ))}

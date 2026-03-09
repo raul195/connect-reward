@@ -4,6 +4,15 @@ import { sendTransactionalEmail } from "@/lib/email/sendEmail";
 import type { TemplateName } from "@/lib/email/sendEmail";
 import type { NotificationPreferences } from "@/lib/types";
 
+// Engagement templates (non-transactional) — these respect email_preferences opt-out
+const ENGAGEMENT_TEMPLATES = new Set<string>([
+  "inactivity",
+  "points_close_to_reward",
+  "referral_nudge",
+  "milestone",
+  "monthly_reminder",
+]);
+
 export const dynamic = "force-dynamic";
 
 function verifyCronSecret(req: NextRequest): boolean {
@@ -81,6 +90,24 @@ export async function POST(req: NextRequest) {
             .eq("id", draft.id);
           failed++;
           continue;
+        }
+
+        // For engagement emails, check email_preferences opt_out as a safety net
+        if (ENGAGEMENT_TEMPLATES.has(draft.template_name)) {
+          const { data: emailPrefs } = await admin
+            .from("email_preferences")
+            .select("opt_out")
+            .eq("customer_id", draft.customer_id)
+            .single();
+
+          if (emailPrefs?.opt_out) {
+            await admin
+              .from("email_draft_queue")
+              .update({ status: "cancelled" })
+              .eq("id", draft.id);
+            failed++;
+            continue;
+          }
         }
 
         const result = await sendTransactionalEmail({
