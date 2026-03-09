@@ -40,6 +40,10 @@ import {
   MonthlyReminderEmail,
   getMonthlyReminderSubject,
 } from "./templates/MonthlyReminderEmail";
+import {
+  PromotionEmail,
+  getPromotionSubject,
+} from "./templates/PromotionEmail";
 import type { BrandingProps } from "./templates/types";
 import type { ReferralStatus, LoyaltyTier } from "@/lib/types";
 
@@ -110,6 +114,36 @@ interface TemplateMap {
     availableRewards: { name: string; pointsRequired: number }[];
     dashboardUrl: string;
   } & BrandingProps;
+  promotion_announcement: {
+    customerName: string;
+    promotionName: string;
+    multiplier: number;
+    endDate: string;
+    daysRemaining: number;
+    pointsBalance: number;
+    dashboardUrl: string;
+    variant: "announcement" | "reminder" | "last_chance";
+  } & BrandingProps;
+  promotion_reminder: {
+    customerName: string;
+    promotionName: string;
+    multiplier: number;
+    endDate: string;
+    daysRemaining: number;
+    pointsBalance: number;
+    dashboardUrl: string;
+    variant: "announcement" | "reminder" | "last_chance";
+  } & BrandingProps;
+  promotion_last_chance: {
+    customerName: string;
+    promotionName: string;
+    multiplier: number;
+    endDate: string;
+    daysRemaining: number;
+    pointsBalance: number;
+    dashboardUrl: string;
+    variant: "announcement" | "reminder" | "last_chance";
+  } & BrandingProps;
 }
 
 export type TemplateName = keyof TemplateMap;
@@ -126,6 +160,9 @@ const PREF_KEY_MAP: Record<TemplateName, keyof NotificationPreferences | null> =
     referral_nudge: "weekly_summary",
     milestone: "milestone_reached",
     monthly_reminder: "weekly_summary",
+    promotion_announcement: null,
+    promotion_reminder: null,
+    promotion_last_chance: null,
   };
 
 // ---------- Render helpers ----------
@@ -196,6 +233,27 @@ function renderTemplate<T extends TemplateName>(
       return {
         element: React.createElement(MonthlyReminderEmail, p),
         subject: getMonthlyReminderSubject(p.companyName),
+      };
+    }
+    case "promotion_announcement": {
+      const p = props as TemplateMap["promotion_announcement"];
+      return {
+        element: React.createElement(PromotionEmail, { ...p, variant: "announcement" }),
+        subject: getPromotionSubject("announcement", p.promotionName, p.multiplier),
+      };
+    }
+    case "promotion_reminder": {
+      const p = props as TemplateMap["promotion_reminder"];
+      return {
+        element: React.createElement(PromotionEmail, { ...p, variant: "reminder" }),
+        subject: getPromotionSubject("reminder", p.promotionName, p.multiplier),
+      };
+    }
+    case "promotion_last_chance": {
+      const p = props as TemplateMap["promotion_last_chance"];
+      return {
+        element: React.createElement(PromotionEmail, { ...p, variant: "last_chance" }),
+        subject: getPromotionSubject("last_chance", p.promotionName, p.multiplier),
       };
     }
     default:

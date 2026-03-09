@@ -21,6 +21,10 @@ const FALLBACKS: Record<string, string> = {
   totalPoints: "your",
   periodLabel: "monthly",
   unsubscribeUrl: "#",
+  promotionName: "our special promotion",
+  multiplier: "2x",
+  endDate: "soon",
+  daysRemaining: "a few",
 };
 
 /**

@@ -10,6 +10,7 @@ import { relativeTime } from "@/lib/relative-time";
 import { TierBadge } from "@/components/shared/TierBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
   ArrowUpRight,
@@ -22,8 +23,10 @@ import {
   Users,
   TrendingUp,
   ArrowRight,
+  Zap,
 } from "lucide-react";
 import type { Profile, PointTransaction, Service } from "@/lib/types";
+import type { ActivePromotion } from "@/lib/promotions";
 
 // ── Animated counter ────────────────────────────
 function AnimatedCounter({ target, duration = 1200 }: { target: number; duration?: number }) {
@@ -126,6 +129,68 @@ function StatsGrid({ stats }: { stats: StatsData }) {
   );
 }
 
+// ── Promotion Banner ───────────────────────────
+function PromotionBanner({ promotion }: { promotion: ActivePromotion }) {
+  const [timeLeft, setTimeLeft] = useState("");
+
+  useEffect(() => {
+    function updateCountdown() {
+      const end = new Date(promotion.end_date).getTime();
+      const now = Date.now();
+      const diff = end - now;
+      if (diff <= 0) {
+        setTimeLeft("Ending soon");
+        return;
+      }
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      setTimeLeft(
+        days > 0
+          ? `${days}d ${hours}h remaining`
+          : `${hours}h remaining`
+      );
+    }
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 60000);
+    return () => clearInterval(interval);
+  }, [promotion.end_date]);
+
+  return (
+    <Card className="border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 overflow-hidden">
+      <CardContent className="p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-200 text-amber-700">
+              <Zap className="h-6 w-6" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-amber-900">{promotion.name}</h3>
+                <Badge className="bg-amber-500 text-white font-bold hover:bg-amber-500">
+                  {promotion.multiplier}x POINTS
+                </Badge>
+              </div>
+              <p className="text-sm text-amber-700">
+                Earn {promotion.multiplier}x points on every referral!
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-amber-700">{timeLeft}</span>
+            <Button asChild className="bg-amber-600 hover:bg-amber-700 text-white">
+              <Link href="/dashboard/refer">
+                <Send className="mr-2 h-4 w-4" />
+                Refer Now
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Activity Feed ───────────────────────────────
 function ActivityFeed({ transactions }: { transactions: PointTransaction[] }) {
   if (transactions.length === 0) {
@@ -156,7 +221,15 @@ function ActivityFeed({ transactions }: { transactions: PointTransaction[] }) {
                   {tx.type === "manual_adjustment" && <Star className="h-4 w-4" />}
                 </span>
                 <div>
-                  <p className="text-sm font-medium">{tx.description || tx.type}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">{tx.description || tx.type}</p>
+                    {tx.promotion_id && (
+                      <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                        <Zap className="h-2.5 w-2.5" />
+                        Boosted
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">{relativeTime(tx.created_at)}</p>
                 </div>
               </div>
@@ -240,6 +313,7 @@ export default function CustomerDashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [transactions, setTransactions] = useState<PointTransaction[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [activePromotion, setActivePromotion] = useState<ActivePromotion | null>(null);
   const [stats, setStats] = useState<StatsData>({
     totalReferrals: 0,
     completedInstalls: 0,
@@ -260,6 +334,7 @@ export default function CustomerDashboard() {
       setProfile(p);
       setServices((data.services ?? []) as Service[]);
       setTransactions((data.transactions ?? []) as PointTransaction[]);
+      setActivePromotion(data.activePromotion ?? null);
       setStats({
         totalReferrals: data.stats?.totalReferrals ?? 0,
         completedInstalls: data.stats?.completedInstalls ?? 0,
@@ -334,6 +409,8 @@ export default function CustomerDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {activePromotion && <PromotionBanner promotion={activePromotion} />}
 
       <PointsCard profile={profile} />
       <StatsGrid stats={stats} />

@@ -1,6 +1,7 @@
 import type { LoyaltyTier } from "./types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendTransactionalEmail } from "./email/sendEmail";
+import { applyPromotionMultiplier } from "./promotions";
 
 export const TIER_THRESHOLDS: Record<LoyaltyTier, number> = {
   bronze: 0,
@@ -105,17 +106,26 @@ export async function awardReferralCompletion(
   const milestoneBonus = getSettingValue(settings, "milestone_bonus", 500);
   const milestoneThreshold = getSettingValue(settings, "milestone_threshold", 5);
 
-  // 3. Award base points
+  // 3. Apply promotion multiplier
+  const { finalAmount: multipliedPoints, promotion } = await applyPromotionMultiplier(
+    referral.company_id,
+    basePoints,
+    supabase
+  );
+
+  const promoSuffix = promotion ? ` (${promotion.multiplier}x ${promotion.name})` : "";
+
   await supabase.from("point_transactions").insert({
     user_id: profile.id,
     company_id: referral.company_id,
     type: "referral_completed",
-    amount: basePoints,
-    description: `Referral completed: ${referral.referral_name}`,
+    amount: multipliedPoints,
+    description: `Referral completed: ${referral.referral_name}${promoSuffix}`,
     reference_id: referralId,
+    promotion_id: promotion?.id ?? null,
   });
 
-  let totalAwarded = basePoints;
+  let totalAwarded = multipliedPoints;
 
   // 4. Count completed referrals to check milestone
   const { count: completedCount } = await supabase
@@ -315,12 +325,22 @@ export async function awardReviewPoints(
   const settings = (company?.settings ?? {}) as Record<string, unknown>;
   const reviewPts = getSettingValue(settings, "review_points", 25);
 
+  // Apply promotion multiplier to review points
+  const { finalAmount: multipliedReviewPts, promotion: reviewPromo } = await applyPromotionMultiplier(
+    review.company_id,
+    reviewPts,
+    supabase
+  );
+
+  const reviewPromoSuffix = reviewPromo ? ` (${reviewPromo.multiplier}x ${reviewPromo.name})` : "";
+
   await supabase.from("point_transactions").insert({
     user_id: review.user_id,
     company_id: review.company_id,
     type: "manual_adjustment",
-    amount: reviewPts,
-    description: "Review verified",
+    amount: multipliedReviewPts,
+    description: `Review verified${reviewPromoSuffix}`,
+    promotion_id: reviewPromo?.id ?? null,
   });
 
   // Update profile
@@ -331,7 +351,7 @@ export async function awardReviewPoints(
     .single();
 
   if (profile) {
-    const newTotal = profile.total_points + reviewPts;
+    const newTotal = profile.total_points + multipliedReviewPts;
     await supabase
       .from("profiles")
       .update({
@@ -345,7 +365,7 @@ export async function awardReviewPoints(
     user_id: review.user_id,
     type: "reward_earned",
     title: "Review Verified!",
-    body: `Your review has been verified. +${reviewPts} points earned!`,
+    body: `Your review has been verified. +${multipliedReviewPts} points earned!`,
   });
 
   // Send points earned email (fire-and-forget)
@@ -365,7 +385,7 @@ export async function awardReviewPoints(
     if (customerData && companyBranding) {
       const compSettings = (companyBranding.settings ?? {}) as Record<string, unknown>;
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io";
-      const updatedTotal = profile.total_points + reviewPts;
+      const updatedTotal = profile.total_points + multipliedReviewPts;
       const tierProgress = getPointsToNextTier(updatedTotal);
 
       sendTransactionalEmail({
@@ -373,8 +393,8 @@ export async function awardReviewPoints(
         to: customerData.email,
         props: {
           customerName: customerData.full_name,
-          pointsEarned: reviewPts,
-          reason: "Review verified",
+          pointsEarned: multipliedReviewPts,
+          reason: `Review verified${reviewPromoSuffix}`,
           totalPoints: updatedTotal,
           tier: calculateTierFromPoints(updatedTotal),
           nextTier: tierProgress?.nextTier ?? null,

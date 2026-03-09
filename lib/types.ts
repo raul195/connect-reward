@@ -128,7 +128,23 @@ export interface PointTransaction {
   amount: number;
   description: string | null;
   reference_id: string | null;
+  promotion_id: string | null;
   created_at: string;
+}
+
+export interface Promotion {
+  id: string;
+  company_id: string;
+  name: string;
+  description: string | null;
+  multiplier: number;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  notify_customers: boolean;
+  send_reminder: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Review {

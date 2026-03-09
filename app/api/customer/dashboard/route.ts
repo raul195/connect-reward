@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/api-helpers";
+import { getActivePromotion } from "@/lib/promotions";
 
 export async function GET() {
   const result = await getAuthContext();
@@ -59,6 +60,11 @@ export async function GET() {
     .select("*", { count: "exact", head: true })
     .eq("user_id", profile.id);
 
+  // Active promotion for this company
+  const activePromotion = profile.company_id
+    ? await getActivePromotion(profile.company_id, admin)
+    : null;
+
   return NextResponse.json({
     profile,
     services: services ?? [],
@@ -69,5 +75,6 @@ export async function GET() {
       pointsThisMonth,
       rewardsRedeemed: rewardsRedeemed ?? 0,
     },
+    activePromotion,
   });
 }

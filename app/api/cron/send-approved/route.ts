@@ -13,6 +13,13 @@ const ENGAGEMENT_TEMPLATES = new Set<string>([
   "monthly_reminder",
 ]);
 
+function isEngagementTemplate(templateName: string): boolean {
+  return (
+    ENGAGEMENT_TEMPLATES.has(templateName) ||
+    templateName.startsWith("promotion_")
+  );
+}
+
 export const dynamic = "force-dynamic";
 
 function verifyCronSecret(req: NextRequest): boolean {
@@ -93,7 +100,7 @@ export async function POST(req: NextRequest) {
         }
 
         // For engagement emails, check email_preferences opt_out as a safety net
-        if (ENGAGEMENT_TEMPLATES.has(draft.template_name)) {
+        if (isEngagementTemplate(draft.template_name)) {
           const { data: emailPrefs } = await admin
             .from("email_preferences")
             .select("opt_out")
