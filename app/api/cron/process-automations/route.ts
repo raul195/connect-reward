@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { AutomationTriggerType } from "@/lib/types";
+import type { AutomationTriggerType, TonePreference } from "@/lib/types";
+import { selectTemplate } from "@/lib/email/selectTemplate";
+import { injectVariables, textToHtml } from "@/lib/email/injectVariables";
 
 export const dynamic = "force-dynamic";
 
@@ -77,7 +79,10 @@ async function processAutomations() {
         timezone: "America/New_York",
         monthly_reminders_enabled: true,
         reminder_frequency: "monthly",
+        tone_preference: "friendly",
       };
+
+      const tonePreference = (settings.tone_preference || "friendly") as TonePreference;
 
       // Get active triggers for this company
       const { data: triggers } = await admin
@@ -135,16 +140,26 @@ async function processAutomations() {
               const isDuplicate = await checkDuplicate(admin, company.id, customer.id, triggerType);
               if (isDuplicate) continue;
 
-              const templateName = "inactivity";
-              const subject = severity === "urgent"
-                ? "Don\u2019t let your points go to waste!"
-                : `We miss you, ${customer.full_name}!`;
+              const { template, variationIndex, tone } = await selectTemplate(
+                triggerType, tonePreference, customer.id, admin
+              );
+
+              const varData: Record<string, string | number> = {
+                customerName: customer.full_name,
+                businessName: company.name,
+                pointsBalance: customer.total_points,
+                dashboardUrl: `${appUrl}/dashboard`,
+              };
+
+              const subject = injectVariables(template.subject, varData);
+              const bodyText = injectVariables(template.body, varData);
+              const bodyHtml = textToHtml(bodyText);
 
               await admin.from("email_draft_queue").insert({
                 company_id: company.id,
                 customer_id: customer.id,
                 trigger_type: triggerType,
-                template_name: templateName,
+                template_name: "inactivity",
                 subject,
                 preview_text: subject,
                 email_data: {
@@ -154,6 +169,10 @@ async function processAutomations() {
                   daysSinceActivity: days,
                   severity,
                   dashboardUrl: `${appUrl}/dashboard`,
+                  body_text: bodyText,
+                  body_html: bodyHtml,
+                  variation_index: variationIndex,
+                  tone,
                 },
                 status: "draft",
                 scheduled_send_at: scheduledSendAt,
@@ -199,7 +218,22 @@ async function processAutomations() {
               const isDuplicate = await checkDuplicate(admin, company.id, customer.id, triggerType);
               if (isDuplicate) continue;
 
-              const subject = `You're only ${pointsNeeded.toLocaleString()} points away from ${targetReward.name}!`;
+              const { template, variationIndex, tone } = await selectTemplate(
+                triggerType, tonePreference, customer.id, admin
+              );
+
+              const varData: Record<string, string | number> = {
+                customerName: customer.full_name,
+                businessName: company.name,
+                pointsBalance: availablePoints,
+                pointsNeeded,
+                rewardName: targetReward.name,
+                rewardCatalogUrl: `${appUrl}/dashboard/rewards`,
+              };
+
+              const subject = injectVariables(template.subject, varData);
+              const bodyText = injectVariables(template.body, varData);
+              const bodyHtml = textToHtml(bodyText);
 
               await admin.from("email_draft_queue").insert({
                 company_id: company.id,
@@ -216,6 +250,10 @@ async function processAutomations() {
                   rewardCost: targetReward.points_required,
                   pointsNeeded,
                   rewardsUrl: `${appUrl}/dashboard/rewards`,
+                  body_text: bodyText,
+                  body_html: bodyHtml,
+                  variation_index: variationIndex,
+                  tone,
                 },
                 status: "draft",
                 scheduled_send_at: scheduledSendAt,
@@ -256,7 +294,22 @@ async function processAutomations() {
               const daysPending = Math.floor(
                 (Date.now() - new Date(referral.created_at).getTime()) / (1000 * 60 * 60 * 24)
               );
-              const subject = `Checking in on your referral for ${referral.referral_name}`;
+
+              const { template, variationIndex, tone } = await selectTemplate(
+                triggerType, tonePreference, submitter.id, admin
+              );
+
+              const varData: Record<string, string | number> = {
+                customerName: submitter.full_name,
+                businessName: company.name,
+                referralName: referral.referral_name,
+                daysPending,
+                referralSubmitUrl: `${appUrl}/dashboard/referrals`,
+              };
+
+              const subject = injectVariables(template.subject, varData);
+              const bodyText = injectVariables(template.body, varData);
+              const bodyHtml = textToHtml(bodyText);
 
               await admin.from("email_draft_queue").insert({
                 company_id: company.id,
@@ -271,6 +324,10 @@ async function processAutomations() {
                   referralName: referral.referral_name,
                   daysPending,
                   dashboardUrl: `${appUrl}/dashboard/referrals`,
+                  body_text: bodyText,
+                  body_html: bodyHtml,
+                  variation_index: variationIndex,
+                  tone,
                 },
                 status: "draft",
                 scheduled_send_at: scheduledSendAt,
@@ -303,7 +360,22 @@ async function processAutomations() {
               const isDuplicate = await checkDuplicate(admin, company.id, customer.id, triggerType);
               if (isDuplicate) continue;
 
-              const subject = `Congrats! You've completed ${customer.referral_count} referrals!`;
+              const { template, variationIndex, tone } = await selectTemplate(
+                triggerType, tonePreference, customer.id, admin
+              );
+
+              const varData: Record<string, string | number> = {
+                customerName: customer.full_name,
+                businessName: company.name,
+                milestoneCount: customer.referral_count,
+                bonusPoints: milestoneBonus,
+                totalPoints: customer.total_points,
+                dashboardUrl: `${appUrl}/dashboard`,
+              };
+
+              const subject = injectVariables(template.subject, varData);
+              const bodyText = injectVariables(template.body, varData);
+              const bodyHtml = textToHtml(bodyText);
 
               await admin.from("email_draft_queue").insert({
                 company_id: company.id,
@@ -319,6 +391,10 @@ async function processAutomations() {
                   bonusPoints: milestoneBonus,
                   totalPoints: customer.total_points,
                   dashboardUrl: `${appUrl}/dashboard`,
+                  body_text: bodyText,
+                  body_html: bodyHtml,
+                  variation_index: variationIndex,
+                  tone,
                 },
                 status: "draft",
                 scheduled_send_at: scheduledSendAt,
@@ -395,7 +471,23 @@ async function processAutomations() {
                 .filter((r) => r.points_required <= customer.total_points)
                 .map((r) => ({ name: r.name, pointsRequired: r.points_required }));
 
-              const subject = `Your monthly rewards summary from ${company.name}`;
+              const periodLabel = settings.reminder_frequency === "quarterly" ? "quarterly" : "monthly";
+
+              const { template, variationIndex, tone } = await selectTemplate(
+                triggerType, tonePreference, customer.id, admin
+              );
+
+              const varData: Record<string, string | number> = {
+                customerName: customer.full_name,
+                businessName: company.name,
+                totalPoints: customer.total_points,
+                periodLabel,
+                dashboardUrl: `${appUrl}/dashboard`,
+              };
+
+              const subject = injectVariables(template.subject, varData);
+              const bodyText = injectVariables(template.body, varData);
+              const bodyHtml = textToHtml(bodyText);
 
               await admin.from("email_draft_queue").insert({
                 company_id: company.id,
@@ -412,6 +504,10 @@ async function processAutomations() {
                   referralsThisMonth: referralsThisMonth || 0,
                   availableRewards,
                   dashboardUrl: `${appUrl}/dashboard`,
+                  body_text: bodyText,
+                  body_html: bodyHtml,
+                  variation_index: variationIndex,
+                  tone,
                 },
                 status: "draft",
                 scheduled_send_at: scheduledSendAt,

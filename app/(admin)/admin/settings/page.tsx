@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, Upload, X, Plus, Pencil, Trash2, GripVertical } from "lucide-react";
-import type { Service, AutomationTriggerType, EmailAutomationTrigger } from "@/lib/types";
+import type { Service, AutomationTriggerType, EmailAutomationTrigger, TonePreference } from "@/lib/types";
 
 export default function SettingsPage() {
   const { profile } = useProfile();
@@ -52,6 +52,7 @@ export default function SettingsPage() {
     timezone: "America/New_York",
     monthly_reminders_enabled: true,
     reminder_frequency: "monthly" as "monthly" | "quarterly",
+    tone_preference: "friendly" as TonePreference,
   });
   const [triggers, setTriggers] = useState<EmailAutomationTrigger[]>([]);
   const [autoLoading, setAutoLoading] = useState(true);
@@ -253,6 +254,7 @@ export default function SettingsPage() {
           timezone: data.settings.timezone ?? "America/New_York",
           monthly_reminders_enabled: data.settings.monthly_reminders_enabled ?? true,
           reminder_frequency: data.settings.reminder_frequency ?? "monthly",
+          tone_preference: data.settings.tone_preference ?? "friendly",
         });
       }
       if (data.triggers) setTriggers(data.triggers as EmailAutomationTrigger[]);
@@ -741,6 +743,27 @@ export default function SettingsPage() {
                       </Select>
                     </div>
                   )}
+
+                  <Separator />
+
+                  {/* Tone preference */}
+                  <div className="space-y-2">
+                    <Label className="font-medium">Email tone</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Choose the tone for automated email templates
+                    </p>
+                    <Select
+                      value={autoSettings.tone_preference}
+                      onValueChange={(v) => setAutoSettings(prev => ({ ...prev, tone_preference: v as TonePreference }))}
+                    >
+                      <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="friendly">Friendly</SelectItem>
+                        <SelectItem value="professional">Professional</SelectItem>
+                        <SelectItem value="motivational">Motivational</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
                   <Button onClick={saveAutomation} disabled={savingAuto} className="bg-teal-600 hover:bg-teal-700">
                     <Save className="mr-2 h-4 w-4" /> {savingAuto ? "Saving..." : "Save Automation Settings"}

@@ -23,6 +23,7 @@ export async function GET() {
     timezone: "America/New_York",
     monthly_reminders_enabled: true,
     reminder_frequency: "monthly",
+    tone_preference: "friendly",
   };
 
   // Get all triggers for this company
@@ -53,6 +54,7 @@ export async function PUT(req: NextRequest) {
     timezone,
     monthly_reminders_enabled,
     reminder_frequency,
+    tone_preference,
   } = body;
 
   const upsertData: Record<string, unknown> = {
@@ -64,6 +66,7 @@ export async function PUT(req: NextRequest) {
   if (timezone !== undefined) upsertData.timezone = timezone;
   if (monthly_reminders_enabled !== undefined) upsertData.monthly_reminders_enabled = monthly_reminders_enabled;
   if (reminder_frequency !== undefined) upsertData.reminder_frequency = reminder_frequency;
+  if (tone_preference !== undefined) upsertData.tone_preference = tone_preference;
 
   const { error: upsertError } = await ctx.admin
     .from("automation_settings")

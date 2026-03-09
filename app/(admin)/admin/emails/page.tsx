@@ -1,13 +1,25 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, X, CheckCheck, Mail } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "@/components/ui/sheet";
+import { Check, X, CheckCheck, Mail, Eye, Save } from "lucide-react";
 import type { EmailDraft, AutomationTriggerType } from "@/lib/types";
+import { textToHtml } from "@/lib/email/injectVariables";
 
 interface DraftWithProfile extends EmailDraft {
   profiles: { full_name: string; email: string } | null;
@@ -61,6 +73,12 @@ export default function EmailsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // Preview panel state
+  const [previewDraft, setPreviewDraft] = useState<DraftWithProfile | null>(null);
+  const [editSubject, setEditSubject] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [savingPreview, setSavingPreview] = useState(false);
+
   const fetchDrafts = useCallback(async () => {
     if (!profile?.company_id) return;
     try {
@@ -86,6 +104,109 @@ export default function EmailsPage() {
   useEffect(() => {
     fetchDrafts();
   }, [fetchDrafts]);
+
+  function openPreview(draft: DraftWithProfile) {
+    setPreviewDraft(draft);
+    setEditSubject(draft.subject);
+    const emailData = draft.email_data as Record<string, unknown>;
+    setEditBody((emailData?.body_text as string) || "");
+  }
+
+  function closePreview() {
+    setPreviewDraft(null);
+    setEditSubject("");
+    setEditBody("");
+  }
+
+  // Live HTML preview from edited body text
+  const previewHtml = useMemo(() => {
+    if (!editBody) return "";
+    return textToHtml(editBody);
+  }, [editBody]);
+
+  // Resolved variable badges from email_data
+  const resolvedVars = useMemo(() => {
+    if (!previewDraft) return [];
+    const emailData = previewDraft.email_data as Record<string, unknown>;
+    if (!emailData) return [];
+    const skipKeys = new Set(["body_text", "body_html", "edited_by_admin", "variation_index", "tone", "companyName", "logoUrl", "primaryColor"]);
+    return Object.entries(emailData)
+      .filter(([key]) => !skipKeys.has(key))
+      .map(([key, value]) => ({ key, value: String(value) }));
+  }, [previewDraft]);
+
+  async function savePreviewEdits() {
+    if (!previewDraft) return;
+    setSavingPreview(true);
+    try {
+      const res = await fetch("/api/admin/email-drafts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: previewDraft.id,
+          subject: editSubject,
+          body_text: editBody,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Changes saved!");
+      // Update local state
+      setPreviewDraft((prev) =>
+        prev ? { ...prev, subject: editSubject } : null
+      );
+      fetchDrafts();
+    } catch {
+      toast.error("Failed to save changes.");
+    }
+    setSavingPreview(false);
+  }
+
+  async function approveFromPreview() {
+    if (!previewDraft) return;
+    setSavingPreview(true);
+    try {
+      // Save any pending edits first, then approve
+      const res = await fetch("/api/admin/email-drafts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: previewDraft.id,
+          status: "approved",
+          subject: editSubject,
+          body_text: editBody,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Draft approved!");
+      closePreview();
+      fetchDrafts();
+    } catch {
+      toast.error("Failed to approve draft.");
+    }
+    setSavingPreview(false);
+  }
+
+  async function cancelFromPreview() {
+    if (!previewDraft) return;
+    setSavingPreview(true);
+    try {
+      const res = await fetch("/api/admin/email-drafts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: previewDraft.id,
+          status: "cancelled",
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Draft cancelled.");
+      closePreview();
+      fetchDrafts();
+    } catch {
+      toast.error("Failed to cancel draft.");
+    }
+    setSavingPreview(false);
+  }
 
   async function approveDraft(id: string) {
     setActionLoading(id);
@@ -258,12 +379,14 @@ export default function EmailsPage() {
                         {drafts.map((draft) => (
                           <div
                             key={draft.id}
-                            className="flex items-center gap-3 rounded-lg border p-4"
+                            className="flex items-center gap-3 rounded-lg border p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                            onClick={() => openPreview(draft)}
                           >
                             <input
                               type="checkbox"
                               checked={selectedIds.has(draft.id)}
                               onChange={() => toggleSelect(draft.id)}
+                              onClick={(e) => e.stopPropagation()}
                               className="h-4 w-4 rounded border-gray-300"
                             />
 
@@ -300,7 +423,22 @@ export default function EmailsPage() {
                               </span>
                             )}
 
-                            <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openPreview(draft);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+
+                            <div
+                              className="flex items-center gap-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -417,6 +555,131 @@ export default function EmailsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Preview Sheet */}
+      <Sheet open={!!previewDraft} onOpenChange={(open) => !open && closePreview()}>
+        <SheetContent className="sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Email Preview</SheetTitle>
+            <SheetDescription>
+              Review and edit this draft before approving.
+            </SheetDescription>
+          </SheetHeader>
+
+          {previewDraft && (
+            <div className="space-y-6 py-4">
+              {/* Customer info + trigger badge */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-medium text-sm">
+                  {previewDraft.profiles?.full_name || "Unknown"}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {previewDraft.profiles?.email}
+                </span>
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                    TRIGGER_COLORS[
+                      previewDraft.trigger_type as AutomationTriggerType
+                    ] || "bg-gray-100 text-gray-800"
+                  }`}
+                >
+                  {TRIGGER_LABELS[
+                    previewDraft.trigger_type as AutomationTriggerType
+                  ] || previewDraft.trigger_type}
+                </span>
+                {typeof (previewDraft.email_data as Record<string, unknown>)?.tone === "string" && (
+                  <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800">
+                    {String((previewDraft.email_data as Record<string, unknown>).tone)}
+                  </span>
+                )}
+              </div>
+
+              {/* Editable subject */}
+              <div className="space-y-2">
+                <Label>Subject</Label>
+                <Input
+                  value={editSubject}
+                  onChange={(e) => setEditSubject(e.target.value)}
+                />
+              </div>
+
+              {/* Editable body */}
+              <div className="space-y-2">
+                <Label>Body</Label>
+                <Textarea
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                  rows={10}
+                  className="font-mono text-sm"
+                />
+              </div>
+
+              {/* Live HTML preview */}
+              {editBody && (
+                <div className="space-y-2">
+                  <Label>Preview</Label>
+                  <div
+                    className="rounded-lg border bg-white p-4 text-sm"
+                    dangerouslySetInnerHTML={{ __html: previewHtml }}
+                  />
+                </div>
+              )}
+
+              {/* Resolved variable badges */}
+              {resolvedVars.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Variables</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {resolvedVars.map(({ key, value }) => (
+                      <span
+                        key={key}
+                        className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs"
+                      >
+                        <span className="font-medium text-muted-foreground mr-1">
+                          {key}:
+                        </span>
+                        <span className="truncate max-w-[150px]">{value}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <SheetFooter className="flex-row gap-2 sm:justify-between">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={cancelFromPreview}
+              disabled={savingPreview}
+            >
+              <X className="mr-2 h-4 w-4" />
+              Cancel Draft
+            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={savePreviewEdits}
+                disabled={savingPreview}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {savingPreview ? "Saving..." : "Save Changes"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={approveFromPreview}
+                disabled={savingPreview}
+                className="bg-teal-600 hover:bg-teal-700"
+              >
+                <Check className="mr-2 h-4 w-4" />
+                Approve
+              </Button>
+            </div>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

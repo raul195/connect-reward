@@ -187,7 +187,9 @@ export interface EmailLog {
   created_at: string;
 }
 
-// ── Email Automation Phase 2 ──
+// ── Email Automation Phase 2 & 3 ──
+
+export type TonePreference = "friendly" | "professional" | "motivational";
 
 export type AutomationTriggerType =
   | "inactivity_30"
@@ -206,6 +208,7 @@ export interface AutomationSettings {
   timezone: string;
   monthly_reminders_enabled: boolean;
   reminder_frequency: "monthly" | "quarterly";
+  tone_preference: TonePreference;
   created_at: string;
   updated_at: string;
 }

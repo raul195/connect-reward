@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext, requireAdmin } from "@/lib/api-helpers";
+import { textToHtml } from "@/lib/email/injectVariables";
 
 export async function GET(req: NextRequest) {
   const { ctx, error } = await getAuthContext();
@@ -69,7 +70,49 @@ export async function PUT(req: NextRequest) {
   }
 
   // Single approve/cancel with optional edits
-  const { id, status: newStatus, subject, scheduled_send_at } = body;
+  const { id, status: newStatus, subject, body_text, scheduled_send_at } = body;
+
+  // Save body_text edit (no status change required)
+  if (id && body_text !== undefined && !newStatus) {
+    // Fetch existing draft
+    const { data: existing, error: fetchErr } = await ctx.admin
+      .from("email_draft_queue")
+      .select("email_data")
+      .eq("id", id)
+      .eq("company_id", companyId)
+      .single();
+
+    if (fetchErr || !existing) {
+      return NextResponse.json(
+        { error: "Draft not found" },
+        { status: 404 }
+      );
+    }
+
+    const emailData = (existing.email_data || {}) as Record<string, unknown>;
+    emailData.body_text = body_text;
+    emailData.body_html = textToHtml(body_text);
+    emailData.edited_by_admin = true;
+
+    const updateData: Record<string, unknown> = { email_data: emailData };
+    if (subject) updateData.subject = subject;
+
+    const { error: updateError } = await ctx.admin
+      .from("email_draft_queue")
+      .update(updateData)
+      .eq("id", id)
+      .eq("company_id", companyId);
+
+    if (updateError) {
+      return NextResponse.json(
+        { error: "Failed to save edits" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  }
+
   if (!id || !newStatus) {
     return NextResponse.json(
       { error: "Missing id or status" },
@@ -84,9 +127,27 @@ export async function PUT(req: NextRequest) {
     );
   }
 
+  // If body_text is provided along with status change, save edits first
   const updateData: Record<string, unknown> = { status: newStatus };
   if (subject) updateData.subject = subject;
   if (scheduled_send_at) updateData.scheduled_send_at = scheduled_send_at;
+
+  if (body_text !== undefined) {
+    const { data: existing } = await ctx.admin
+      .from("email_draft_queue")
+      .select("email_data")
+      .eq("id", id)
+      .eq("company_id", companyId)
+      .single();
+
+    if (existing) {
+      const emailData = (existing.email_data || {}) as Record<string, unknown>;
+      emailData.body_text = body_text;
+      emailData.body_html = textToHtml(body_text);
+      emailData.edited_by_admin = true;
+      updateData.email_data = emailData;
+    }
+  }
 
   const { error: updateError } = await ctx.admin
     .from("email_draft_queue")
