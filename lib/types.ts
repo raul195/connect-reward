@@ -56,6 +56,8 @@ export interface Profile {
   invited_by: string | null;
   notification_preferences: NotificationPreferences;
   last_activity: string | null;
+  email_status: 'unknown' | 'valid' | 'bounced' | 'complained';
+  import_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -268,6 +270,35 @@ export interface EmailDraft {
   scheduled_send_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+// ── Customer Imports ──
+
+export interface CustomerImport {
+  id: string;
+  company_id: string;
+  created_by: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  total_rows: number;
+  processed_rows: number;
+  created_count: number;
+  skipped_count: number;
+  error_count: number;
+  send_welcome: boolean;
+  original_filename: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ImportRow {
+  id: string;
+  import_id: string;
+  row_number: number;
+  raw_data: Record<string, string>;
+  status: 'pending' | 'created' | 'skipped_duplicate' | 'skipped_invalid' | 'error';
+  error_message: string | null;
+  profile_id: string | null;
+  created_at: string;
 }
 
 export interface EarlyAccessApplication {

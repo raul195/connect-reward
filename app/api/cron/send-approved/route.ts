@@ -99,6 +99,25 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
+        // Skip bounced/complained recipients
+        const { data: recipientProfile } = await admin
+          .from("profiles")
+          .select("email_status")
+          .eq("id", draft.customer_id)
+          .single();
+
+        if (
+          recipientProfile?.email_status === "bounced" ||
+          recipientProfile?.email_status === "complained"
+        ) {
+          await admin
+            .from("email_draft_queue")
+            .update({ status: "cancelled" })
+            .eq("id", draft.id);
+          failed++;
+          continue;
+        }
+
         // For engagement emails, check email_preferences opt_out as a safety net
         if (isEngagementTemplate(draft.template_name)) {
           const { data: emailPrefs } = await admin
