@@ -11,15 +11,17 @@ interface SelectTemplateResult {
 /**
  * Select a template variation for a given trigger type and tone,
  * rotating through variations 0 → 1 → 2 → 0 per customer+trigger.
+ *
+ * Checks custom_templates first (per-company overrides), falls back
+ * to the default TEMPLATE_LIBRARY.
  */
 export async function selectTemplate(
   triggerType: AutomationTriggerType,
   tonePreference: TonePreference,
   customerId: string,
-  adminClient: SupabaseClient
+  adminClient: SupabaseClient,
+  companyId?: string
 ): Promise<SelectTemplateResult> {
-  const templates = TEMPLATE_LIBRARY[triggerType][tonePreference];
-
   // Find the last variation_index used for this customer + trigger
   const { data: lastDraft } = await adminClient
     .from("email_draft_queue")
@@ -43,6 +45,28 @@ export async function selectTemplate(
     }
   }
 
+  // Check for a custom template override
+  if (companyId) {
+    const { data: custom } = await adminClient
+      .from("custom_templates")
+      .select("subject, body")
+      .eq("company_id", companyId)
+      .eq("trigger_type", triggerType)
+      .eq("tone", tonePreference)
+      .eq("variation_index", variationIndex)
+      .single();
+
+    if (custom) {
+      return {
+        template: { subject: custom.subject, body: custom.body },
+        variationIndex,
+        tone: tonePreference,
+      };
+    }
+  }
+
+  // Fall back to default template library
+  const templates = TEMPLATE_LIBRARY[triggerType][tonePreference];
   return {
     template: templates[variationIndex],
     variationIndex,

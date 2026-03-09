@@ -141,7 +141,7 @@ async function processAutomations() {
               if (isDuplicate) continue;
 
               const { template, variationIndex, tone } = await selectTemplate(
-                triggerType, tonePreference, customer.id, admin
+                triggerType, tonePreference, customer.id, admin, company.id
               );
 
               const varData: Record<string, string | number> = {
@@ -219,7 +219,7 @@ async function processAutomations() {
               if (isDuplicate) continue;
 
               const { template, variationIndex, tone } = await selectTemplate(
-                triggerType, tonePreference, customer.id, admin
+                triggerType, tonePreference, customer.id, admin, company.id
               );
 
               const varData: Record<string, string | number> = {
@@ -296,7 +296,7 @@ async function processAutomations() {
               );
 
               const { template, variationIndex, tone } = await selectTemplate(
-                triggerType, tonePreference, submitter.id, admin
+                triggerType, tonePreference, submitter.id, admin, company.id
               );
 
               const varData: Record<string, string | number> = {
@@ -361,7 +361,7 @@ async function processAutomations() {
               if (isDuplicate) continue;
 
               const { template, variationIndex, tone } = await selectTemplate(
-                triggerType, tonePreference, customer.id, admin
+                triggerType, tonePreference, customer.id, admin, company.id
               );
 
               const varData: Record<string, string | number> = {
@@ -474,7 +474,7 @@ async function processAutomations() {
               const periodLabel = settings.reminder_frequency === "quarterly" ? "quarterly" : "monthly";
 
               const { template, variationIndex, tone } = await selectTemplate(
-                triggerType, tonePreference, customer.id, admin
+                triggerType, tonePreference, customer.id, admin, company.id
               );
 
               const varData: Record<string, string | number> = {
