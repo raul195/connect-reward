@@ -4,6 +4,7 @@ import type { AutomationTriggerType, TonePreference } from "@/lib/types";
 import { selectTemplate } from "@/lib/email/selectTemplate";
 import { injectVariables, textToHtml } from "@/lib/email/injectVariables";
 import { ensureEmailPreferences } from "@/lib/email/ensureEmailPreferences";
+import { getDripValue } from "@/lib/drip-defaults";
 
 // Maps trigger types to the email_preferences column that controls them.
 // If a trigger isn't here, no per-trigger preference check is applied (only opt_out).
@@ -130,7 +131,7 @@ async function processAutomations() {
         switch (triggerType) {
           case "inactivity_30":
           case "inactivity_60": {
-            const days = triggerType === "inactivity_30" ? 30 : 60;
+            const days = getDripValue(triggerType, (trigger.condition_data as Record<string, unknown>) || {});
             const severity = triggerType === "inactivity_30" ? "mild" : "urgent";
             const cutoff = new Date();
             cutoff.setDate(cutoff.getDate() - days);
@@ -228,7 +229,7 @@ async function processAutomations() {
               if (!targetReward) continue;
 
               const pointsNeeded = targetReward.points_required - availablePoints;
-              const threshold = targetReward.points_required * 0.2;
+              const threshold = getDripValue(triggerType, (trigger.condition_data as Record<string, unknown>) || {});
               if (pointsNeeded > threshold) continue;
 
               const emailPrefs = await ensureEmailPreferences(customer.id, admin);
@@ -290,8 +291,9 @@ async function processAutomations() {
           }
 
           case "referral_nudge": {
+            const nudgeDays = getDripValue(triggerType, (trigger.condition_data as Record<string, unknown>) || {});
             const cutoff = new Date();
-            cutoff.setDate(cutoff.getDate() - 14);
+            cutoff.setDate(cutoff.getDate() - nudgeDays);
 
             const { data: pendingReferrals } = await admin
               .from("referrals")

@@ -41,6 +41,7 @@ import {
   type TemplateContent,
   type TriggerTemplates,
 } from "@/lib/email/templateLibrary";
+import { getDripValue, isCustomized, DRIP_DEFAULTS } from "@/lib/drip-defaults";
 
 interface DraftWithProfile extends EmailDraft {
   profiles: { full_name: string; email: string } | null;
@@ -390,6 +391,14 @@ export default function EmailsPage() {
   const [templateTone, setTemplateTone] = useState<TonePreference>("friendly");
   const [activeTone, setActiveTone] = useState<TonePreference>("friendly");
 
+  // Drip editing state
+  const [dripValues, setDripValues] = useState<Record<string, number>>({});
+  const [dripEditing, setDripEditing] = useState<string | null>(null);
+  const [dripEditValue, setDripEditValue] = useState<string>("");
+  const [dripSaving, setDripSaving] = useState<string | null>(null);
+  const [dripSaveConfirm, setDripSaveConfirm] = useState<string | null>(null);
+  const [dripError, setDripError] = useState<string | null>(null);
+
   const fetchDrafts = useCallback(async () => {
     if (!profile?.company_id) return;
     try {
@@ -432,10 +441,15 @@ export default function EmailsPage() {
       if (res.ok) {
         const data = await res.json();
         const states: Record<string, boolean> = {};
+        const drip: Record<string, number> = {};
         for (const trigger of data.triggers || []) {
           states[trigger.trigger_type] = trigger.is_active;
+          const condData = (trigger.condition_data || {}) as Record<string, unknown>;
+          const val = getDripValue(trigger.trigger_type, condData);
+          if (val > 0) drip[trigger.trigger_type] = val;
         }
         setTriggerStates(states);
+        setDripValues(drip);
 
         // Get the active tone from automation settings
         if (data.settings?.tone_preference) {
@@ -773,6 +787,143 @@ export default function EmailsPage() {
     } catch {
       toast.error("Failed to toggle trigger.");
     }
+  }
+
+  // ── Drip editing helpers ──
+
+  function getDripTimingLabel(item: (typeof DRIP_TIMELINE)[number]): string {
+    if (!item.triggerType) return item.timing;
+    const config = DRIP_DEFAULTS[item.triggerType];
+    if (!config || config.field !== "delay_days") return item.timing;
+    const value = dripValues[item.triggerType] ?? config.defaultValue;
+    if (item.triggerType === "program_reminder") {
+      return value <= 31 ? "Monthly" : "Quarterly";
+    }
+    return `Day ${value}`;
+  }
+
+  function getDripConditionLabel(item: (typeof DRIP_TIMELINE)[number]): string {
+    if (!item.triggerType) return item.condition;
+    const config = DRIP_DEFAULTS[item.triggerType];
+    if (!config) return item.condition;
+    const value = dripValues[item.triggerType] ?? config.defaultValue;
+    switch (item.triggerType) {
+      case "inactivity_30":
+        return `Sent if the customer hasn't logged in or taken action in ${value} days`;
+      case "inactivity_60":
+        return `Sent if the customer is still inactive after ${value} days`;
+      case "points_close_to_reward":
+        return `Sent when the customer is within ${value} points of earning their next reward`;
+      case "referral_nudge":
+        return `Sent when a submitted referral has been pending for ${value}+ days`;
+      case "program_reminder":
+        return `Sent on the 1st of each ${value <= 31 ? "month" : "quarter"} with an activity recap`;
+      default:
+        return item.condition;
+    }
+  }
+
+  function startDripEdit(triggerType: string) {
+    const config = DRIP_DEFAULTS[triggerType as AutomationTriggerType];
+    if (!config) return;
+    const current = dripValues[triggerType] ?? config.defaultValue;
+    setDripEditing(triggerType);
+    setDripEditValue(String(current));
+    setDripError(null);
+  }
+
+  function cancelDripEdit() {
+    setDripEditing(null);
+    setDripEditValue("");
+    setDripError(null);
+  }
+
+  function validateDripInput(triggerType: string, value: number): string | null {
+    const config = DRIP_DEFAULTS[triggerType as AutomationTriggerType];
+    if (!config) return "No configuration for this trigger";
+    if (!Number.isInteger(value)) return "Must be a whole number";
+    if (value < config.min || value > config.max) {
+      return `Must be between ${config.min} and ${config.max}`;
+    }
+    if (triggerType === "inactivity_30") {
+      const otherVal = dripValues["inactivity_60"] ?? DRIP_DEFAULTS["inactivity_60"]!.defaultValue;
+      if (value >= otherVal) return `Must be less than the 60-day value (${otherVal})`;
+    }
+    if (triggerType === "inactivity_60") {
+      const otherVal = dripValues["inactivity_30"] ?? DRIP_DEFAULTS["inactivity_30"]!.defaultValue;
+      if (value <= otherVal) return `Must be greater than the 30-day value (${otherVal})`;
+    }
+    return null;
+  }
+
+  async function saveDripEdit(triggerType: string) {
+    const config = DRIP_DEFAULTS[triggerType as AutomationTriggerType];
+    if (!config) return;
+
+    let value = parseInt(dripEditValue, 10);
+    if (!value || value <= 0) {
+      value = config.defaultValue;
+    }
+
+    const err = validateDripInput(triggerType, value);
+    if (err) {
+      setDripError(err);
+      return;
+    }
+
+    setDripSaving(triggerType);
+    setDripError(null);
+    try {
+      const res = await fetch("/api/admin/automation-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trigger_type: triggerType,
+          condition_data: { [config.field]: value },
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setDripError(data.error || "Failed to save");
+        setDripSaving(null);
+        return;
+      }
+      setDripValues((prev) => ({ ...prev, [triggerType]: value }));
+      setDripEditing(null);
+      setDripSaveConfirm(triggerType);
+      setTimeout(() => setDripSaveConfirm((c) => (c === triggerType ? null : c)), 2000);
+    } catch {
+      setDripError("Failed to save");
+    }
+    setDripSaving(null);
+  }
+
+  async function resetDripToDefault(triggerType: string) {
+    const config = DRIP_DEFAULTS[triggerType as AutomationTriggerType];
+    if (!config) return;
+
+    setDripSaving(triggerType);
+    try {
+      const res = await fetch("/api/admin/automation-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trigger_type: triggerType,
+          reset_to_default: true,
+        }),
+      });
+      if (!res.ok) {
+        toast.error("Failed to reset to default.");
+        setDripSaving(null);
+        return;
+      }
+      setDripValues((prev) => ({ ...prev, [triggerType]: config.defaultValue }));
+      setDripSaveConfirm(triggerType);
+      setTimeout(() => setDripSaveConfirm((c) => (c === triggerType ? null : c)), 2000);
+    } catch {
+      toast.error("Failed to reset to default.");
+    }
+    setDripSaving(null);
   }
 
   // Group pending drafts by scheduled date
@@ -1303,7 +1454,7 @@ export default function EmailsPage() {
                   <CardTitle>Customer Email Journey</CardTitle>
                   <p className="text-sm text-muted-foreground">
                     A chronological view of every email a customer may receive,
-                    from signup through ongoing engagement.
+                    from signup through ongoing engagement. Click the pencil icon to customize timing.
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -1319,6 +1470,20 @@ export default function EmailsPage() {
                             : item.triggerType
                             ? triggerStates[item.triggerType] !== false
                             : true;
+
+                        const dripConfig = item.triggerType
+                          ? DRIP_DEFAULTS[item.triggerType]
+                          : undefined;
+                        const isEditable = !!dripConfig;
+                        const customized = item.triggerType
+                          ? isCustomized(item.triggerType, {
+                              [dripConfig?.field || ""]:
+                                dripValues[item.triggerType],
+                            })
+                          : false;
+                        const isEditingThis = dripEditing === item.triggerType;
+                        const isSavingThis = dripSaving === item.triggerType;
+                        const showConfirm = dripSaveConfirm === item.triggerType;
 
                         return (
                           <div
@@ -1340,7 +1505,7 @@ export default function EmailsPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                  {item.timing}
+                                  {getDripTimingLabel(item)}
                                 </span>
                                 <span
                                   className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${
@@ -1358,17 +1523,106 @@ export default function EmailsPage() {
                                     Inactive
                                   </span>
                                 )}
+                                {customized && !isEditingThis && (
+                                  <span className="inline-flex items-center rounded-full bg-orange-100 text-orange-700 px-2 py-0.5 text-[10px] font-medium">
+                                    Customized
+                                  </span>
+                                )}
+                                {showConfirm && (
+                                  <span className="inline-flex items-center rounded-full bg-green-100 text-green-700 px-2 py-0.5 text-[10px] font-medium animate-in fade-in">
+                                    {customized ? "Saved" : "Restored to default"}
+                                  </span>
+                                )}
                               </div>
                               <p className="font-medium text-sm mt-1">
                                 {item.name}
                               </p>
                               <p className="text-xs text-muted-foreground mt-0.5">
-                                {item.condition}
+                                {getDripConditionLabel(item)}
                               </p>
+
+                              {/* Inline edit controls */}
+                              {isEditable && isEditingThis && dripConfig && (
+                                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                                  <Input
+                                    type="number"
+                                    min={dripConfig.min}
+                                    max={dripConfig.max}
+                                    step={1}
+                                    value={dripEditValue}
+                                    onChange={(e) => {
+                                      setDripEditValue(e.target.value);
+                                      setDripError(null);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") saveDripEdit(item.triggerType!);
+                                      if (e.key === "Escape") cancelDripEdit();
+                                    }}
+                                    className="w-24 h-8 text-sm"
+                                    disabled={isSavingThis}
+                                    autoFocus
+                                  />
+                                  <span className="text-xs text-muted-foreground">
+                                    {dripConfig.unit} ({dripConfig.min}–{dripConfig.max})
+                                  </span>
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    onClick={() => saveDripEdit(item.triggerType!)}
+                                    disabled={isSavingThis}
+                                  >
+                                    {isSavingThis ? (
+                                      <RefreshCw className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <Save className="h-3 w-3 mr-1" />
+                                    )}
+                                    Save
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    onClick={cancelDripEdit}
+                                    disabled={isSavingThis}
+                                  >
+                                    <X className="h-3 w-3 mr-1" />
+                                    Cancel
+                                  </Button>
+                                  {dripError && dripEditing === item.triggerType && (
+                                    <span className="text-xs text-red-600">{dripError}</span>
+                                  )}
+                                </div>
+                              )}
                             </div>
 
                             {/* Actions */}
                             <div className="flex items-center gap-1 shrink-0 mt-1">
+                              {isEditable && !isEditingThis && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 w-7 p-0"
+                                    title={`Edit ${dripConfig!.label.toLowerCase()}`}
+                                    onClick={() => startDripEdit(item.triggerType!)}
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  {customized && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 w-7 p-0"
+                                      title="Reset to default"
+                                      onClick={() => resetDripToDefault(item.triggerType!)}
+                                      disabled={isSavingThis}
+                                    >
+                                      <RotateCcw className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </>
+                              )}
                               {item.triggerType && (
                                 <Button
                                   variant="ghost"
@@ -1397,7 +1651,6 @@ export default function EmailsPage() {
                                   className="h-7 text-xs"
                                   onClick={() => {
                                     setTemplatesSubTab("library");
-                                    // Scroll to the template section
                                     setTimeout(() => {
                                       const el = document.getElementById(
                                         `template-${item.triggerType}`
