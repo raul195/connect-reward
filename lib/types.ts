@@ -272,6 +272,29 @@ export interface EmailDraft {
   updated_at: string;
 }
 
+// ── Support Tickets ──
+
+export type TicketCategory = "bug" | "account" | "billing" | "feature_request" | "other";
+export type TicketStatus = "open" | "in_progress" | "resolved" | "closed";
+export type TicketPriority = "low" | "medium" | "high" | "urgent";
+
+export interface SupportTicket {
+  id: string;
+  company_id: string;
+  profile_id: string;
+  category: TicketCategory;
+  subject: string;
+  description: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  resolution: string | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  ai_analysis: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // ── Customer Imports ──
 
 export interface CustomerImport {

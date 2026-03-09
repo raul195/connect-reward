@@ -44,6 +44,10 @@ import {
   PromotionEmail,
   getPromotionSubject,
 } from "./templates/PromotionEmail";
+import {
+  TicketResolvedEmail,
+  getTicketResolvedSubject,
+} from "./templates/TicketResolvedEmail";
 import type { BrandingProps } from "./templates/types";
 import type { ReferralStatus, LoyaltyTier } from "@/lib/types";
 
@@ -144,6 +148,12 @@ interface TemplateMap {
     dashboardUrl: string;
     variant: "announcement" | "reminder" | "last_chance";
   } & BrandingProps;
+  ticket_resolved: {
+    customerName: string;
+    ticketSubject: string;
+    resolution: string;
+    dashboardUrl: string;
+  } & BrandingProps;
 }
 
 export type TemplateName = keyof TemplateMap;
@@ -163,6 +173,7 @@ const PREF_KEY_MAP: Record<TemplateName, keyof NotificationPreferences | null> =
     promotion_announcement: null,
     promotion_reminder: null,
     promotion_last_chance: null,
+    ticket_resolved: null, // transactional
   };
 
 // ---------- Render helpers ----------
@@ -254,6 +265,13 @@ function renderTemplate<T extends TemplateName>(
       return {
         element: React.createElement(PromotionEmail, { ...p, variant: "last_chance" }),
         subject: getPromotionSubject("last_chance", p.promotionName, p.multiplier),
+      };
+    }
+    case "ticket_resolved": {
+      const p = props as TemplateMap["ticket_resolved"];
+      return {
+        element: React.createElement(TicketResolvedEmail, p),
+        subject: getTicketResolvedSubject(p.ticketSubject),
       };
     }
     default:

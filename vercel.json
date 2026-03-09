@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/process-promotions",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/health-check",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/process-tickets",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
