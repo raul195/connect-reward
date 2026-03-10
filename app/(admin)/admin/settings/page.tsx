@@ -22,8 +22,8 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, Upload, X, Plus, Pencil, Trash2, GripVertical } from "lucide-react";
-import type { Service, AutomationTriggerType, EmailAutomationTrigger, TonePreference } from "@/lib/types";
+import { Save, Upload, X, Plus, Pencil, Trash2, GripVertical, HelpCircle } from "lucide-react";
+import type { Service, AutomationTriggerType, EmailAutomationTrigger, TonePreference, TicketCategory } from "@/lib/types";
 
 export default function SettingsPage() {
   const { profile } = useProfile();
@@ -57,6 +57,12 @@ export default function SettingsPage() {
   const [triggers, setTriggers] = useState<EmailAutomationTrigger[]>([]);
   const [autoLoading, setAutoLoading] = useState(true);
   const [savingAuto, setSavingAuto] = useState(false);
+
+  // Support ticket state
+  const [supportCategory, setSupportCategory] = useState<TicketCategory>("account");
+  const [supportSubject, setSupportSubject] = useState("");
+  const [supportDescription, setSupportDescription] = useState("");
+  const [submittingTicket, setSubmittingTicket] = useState(false);
 
   useEffect(() => {
     if (company?.settings) {
@@ -293,6 +299,37 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleSubmitSupportTicket() {
+    if (!supportSubject.trim() || !supportDescription.trim()) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    setSubmittingTicket(true);
+    try {
+      const res = await fetch("/api/admin/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: supportCategory,
+          subject: supportSubject,
+          description: supportDescription,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+      } else {
+        toast.success("Support ticket submitted!");
+        setSupportCategory("account");
+        setSupportSubject("");
+        setSupportDescription("");
+      }
+    } catch {
+      toast.error("Failed to submit ticket");
+    }
+    setSubmittingTicket(false);
+  }
+
   const TRIGGER_INFO: Record<AutomationTriggerType, { label: string; description: string }> = {
     inactivity_30: { label: "30-day inactivity", description: "Send a gentle nudge to customers who haven't been active in 30 days" },
     inactivity_60: { label: "60-day inactivity (urgent)", description: "Send an urgent reminder to customers inactive for 60 days" },
@@ -336,6 +373,7 @@ export default function SettingsPage() {
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="branding">Branding</TabsTrigger>
           <TabsTrigger value="automation">Automation</TabsTrigger>
+          <TabsTrigger value="support">Support</TabsTrigger>
         </TabsList>
 
         {/* Bonuses & Settings Tab */}
@@ -616,6 +654,47 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Support Tab */}
+        <TabsContent value="support">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <HelpCircle className="h-5 w-5" />
+                Submit a Support Ticket
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Need help? Submit a ticket and our team will get back to you.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select value={supportCategory} onValueChange={(v) => setSupportCategory(v as TicketCategory)}>
+                  <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bug">Bug Report</SelectItem>
+                    <SelectItem value="account">Account</SelectItem>
+                    <SelectItem value="billing">Billing</SelectItem>
+                    <SelectItem value="feature_request">Feature Request</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Subject</Label>
+                <Input value={supportSubject} onChange={(e) => setSupportSubject(e.target.value)} placeholder="Brief summary of your issue" />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea value={supportDescription} onChange={(e) => setSupportDescription(e.target.value)} placeholder="Describe your issue in detail..." rows={4} />
+              </div>
+              <Button onClick={handleSubmitSupportTicket} disabled={submittingTicket} className="bg-teal-600 hover:bg-teal-700">
+                {submittingTicket ? "Submitting..." : "Submit Ticket"}
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Automation Tab */}

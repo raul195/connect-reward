@@ -15,7 +15,7 @@ import {
   Bell,
   User,
   BarChart3,
-  HelpCircle,
+
 } from "lucide-react";
 import { DemoModeBanner } from "@/components/shared/DemoModeBanner";
 
@@ -59,11 +59,6 @@ const customerNav: NavItem[] = [
     label: "Points History",
     href: "/dashboard/points",
     icon: <Gem className="h-5 w-5" />,
-  },
-  {
-    label: "Support",
-    href: "/dashboard/support",
-    icon: <HelpCircle className="h-5 w-5" />,
   },
   {
     label: "Notifications",

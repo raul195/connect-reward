@@ -13,8 +13,15 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Camera, Save, Mail, MailX } from "lucide-react";
-import type { Profile, NotificationPreferences } from "@/lib/types";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Camera, Save, Mail, MailX, HelpCircle } from "lucide-react";
+import type { Profile, NotificationPreferences, TicketCategory } from "@/lib/types";
 
 interface EmailPrefs {
   opt_out: boolean;
@@ -57,6 +64,13 @@ export default function ProfilePage() {
     promotional_emails_enabled: true,
   });
   const [savingEmailPrefs, setSavingEmailPrefs] = useState(false);
+
+  // Support ticket state
+  const [ticketOpen, setTicketOpen] = useState(false);
+  const [ticketCategory, setTicketCategory] = useState<TicketCategory>("account");
+  const [ticketSubject, setTicketSubject] = useState("");
+  const [ticketDescription, setTicketDescription] = useState("");
+  const [submittingTicket, setSubmittingTicket] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -193,6 +207,38 @@ export default function ProfilePage() {
       toast.error("Failed to update email preferences.");
     }
     setSavingEmailPrefs(false);
+  }
+
+  async function handleSubmitTicket() {
+    if (!ticketSubject.trim() || !ticketDescription.trim()) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    setSubmittingTicket(true);
+    try {
+      const res = await fetch("/api/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          category: ticketCategory,
+          subject: ticketSubject,
+          description: ticketDescription,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+      } else {
+        toast.success("Ticket submitted successfully!");
+        setTicketOpen(false);
+        setTicketCategory("account");
+        setTicketSubject("");
+        setTicketDescription("");
+      }
+    } catch {
+      toast.error("Failed to submit ticket");
+    }
+    setSubmittingTicket(false);
   }
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -466,6 +512,62 @@ export default function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Need Help? */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <HelpCircle className="h-5 w-5" />
+            Need Help?
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Having an issue? Submit a support ticket and we&apos;ll get back to you.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={() => setTicketOpen(true)} className="bg-teal-600 hover:bg-teal-700">
+            Submit a Ticket
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Support Ticket Dialog */}
+      <Dialog open={ticketOpen} onOpenChange={setTicketOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Submit a Support Ticket</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={ticketCategory} onValueChange={(v) => setTicketCategory(v as TicketCategory)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bug">Bug Report</SelectItem>
+                  <SelectItem value="account">Account</SelectItem>
+                  <SelectItem value="billing">Billing</SelectItem>
+                  <SelectItem value="feature_request">Feature Request</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Subject</Label>
+              <Input value={ticketSubject} onChange={(e) => setTicketSubject(e.target.value)} placeholder="Brief summary of your issue" />
+            </div>
+            <div className="space-y-2">
+              <Label>Description</Label>
+              <Textarea value={ticketDescription} onChange={(e) => setTicketDescription(e.target.value)} placeholder="Describe your issue in detail..." rows={4} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTicketOpen(false)}>Cancel</Button>
+            <Button onClick={handleSubmitTicket} disabled={submittingTicket} className="bg-teal-600 hover:bg-teal-700">
+              {submittingTicket ? "Submitting..." : "Submit Ticket"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

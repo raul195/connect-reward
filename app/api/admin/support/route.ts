@@ -37,6 +37,53 @@ export async function GET(request: Request) {
   }
 }
 
+export async function POST(request: Request) {
+  try {
+    const result = await getAuthContext();
+    if (result.error) return result.error;
+    const { profile, admin } = result.ctx;
+
+    const forbidden = requireAdmin(profile);
+    if (forbidden) return forbidden;
+
+    const body = await request.json();
+    const { category, subject, description } = body;
+
+    if (!category || !subject || !description) {
+      return NextResponse.json(
+        { error: "Category, subject, and description are required" },
+        { status: 400 }
+      );
+    }
+
+    const validCategories = ["bug", "account", "billing", "feature_request", "other"];
+    if (!validCategories.includes(category)) {
+      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+    }
+
+    const { data: ticket, error } = await admin
+      .from("support_tickets")
+      .insert({
+        company_id: profile.company_id,
+        profile_id: profile.id,
+        category,
+        subject,
+        description,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ ticket });
+  } catch (error) {
+    console.error("Admin support POST error:", error);
+    return NextResponse.json({ error: "Failed to create ticket" }, { status: 500 });
+  }
+}
+
 export async function PUT(request: Request) {
   try {
     const result = await getAuthContext();
