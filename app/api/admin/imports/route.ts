@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext, requireAdmin } from "@/lib/api-helpers";
-import { isAtLimit } from "@/lib/plan-limits";
+import { isAtLimit, PLAN_LIMITS } from "@/lib/plan-limits";
 import type { PlanTier } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
@@ -47,10 +47,11 @@ export async function POST(request: NextRequest) {
     .eq("role", "customer");
 
   const totalAfter = (currentCustomers ?? 0) + rows.length;
+  const maxCustomers = PLAN_LIMITS[plan].maxCustomers;
   if (isAtLimit(plan, "customers", totalAfter - 1)) {
     return NextResponse.json(
       {
-        error: `Import would exceed your plan limit. You can add ${Math.max(0, (plan === "free" ? 50 : plan === "starter" ? 200 : plan === "growth" ? 1000 : Infinity) - (currentCustomers ?? 0))} more customers.`,
+        error: `Import would exceed your plan limit. You can add ${Math.max(0, maxCustomers - (currentCustomers ?? 0))} more customers.`,
       },
       { status: 403 }
     );

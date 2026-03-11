@@ -21,6 +21,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { UpgradeCTA } from "@/components/shared/UpgradeCTA";
+import { PLAN_LIMITS } from "@/lib/plan-limits";
 import { Plus, Pencil, Trash2, Gift, Lock, CreditCard, Plane, Monitor, Ticket, Home } from "lucide-react";
 import type { Reward, RewardCategory } from "@/lib/types";
 
@@ -62,7 +63,9 @@ export default function RewardsManagement() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const isFreePlan = company?.plan_tier === "free";
+  const planTier = (company?.plan_tier ?? "free") as "free" | "beta";
+  const rewardLimit = PLAN_LIMITS[planTier].maxRewards;
+  const atRewardLimit = rewards.length >= rewardLimit;
 
   const [useSample, setUseSample] = useState(false);
 
@@ -196,11 +199,11 @@ export default function RewardsManagement() {
         </div>
       </div>
 
-      {isFreePlan && <UpgradeCTA message="Upgrade to customize your rewards catalog." />}
+      {atRewardLimit && <UpgradeCTA message={`You've reached your ${rewardLimit}-reward limit. Upgrade to add more.`} />}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {/* Add card */}
-        {!isFreePlan && (
+        {!atRewardLimit && (
           <Card className="flex cursor-pointer items-center justify-center border-2 border-dashed border-teal-300 transition-colors hover:border-teal-500 hover:bg-teal-50/50"
             onClick={openAdd}>
             <CardContent className="flex flex-col items-center gap-2 py-12 text-teal-600">
@@ -212,21 +215,14 @@ export default function RewardsManagement() {
 
         {rewards.map(r => (
           <Card key={r.id} className={`relative ${!r.is_active ? "opacity-60" : ""}`}>
-            {isFreePlan && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/50 backdrop-blur-[1px]">
-                <Lock className="h-6 w-6 text-gray-400" />
-              </div>
-            )}
             <CardContent className="p-5">
               <div className="flex items-start justify-between">
                 <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
                   {CAT_ICONS[r.category] || <Gift className="h-8 w-8" />}
                 </div>
-                {!isFreePlan && (
-                  <div className="flex items-center gap-1">
-                    <Switch checked={r.is_active} onCheckedChange={(v) => toggleActive(r.id, v)} />
-                  </div>
-                )}
+                <div className="flex items-center gap-1">
+                  <Switch checked={r.is_active} onCheckedChange={(v) => toggleActive(r.id, v)} />
+                </div>
               </div>
               <h3 className="mt-3 font-bold">{r.name}</h3>
               {r.description && <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{r.description}</p>}
@@ -237,16 +233,14 @@ export default function RewardsManagement() {
               {r.quantity_available !== null && (
                 <p className="mt-1 text-xs text-muted-foreground">{r.quantity_available} remaining</p>
               )}
-              {!isFreePlan && (
-                <div className="mt-3 flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => openEdit(r)}>
-                    <Pencil className="mr-1 h-3 w-3" /> Edit
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => setDeleteConfirm(r.id)}>
-                    <Trash2 className="mr-1 h-3 w-3" /> Delete
-                  </Button>
-                </div>
-              )}
+              <div className="mt-3 flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => openEdit(r)}>
+                  <Pencil className="mr-1 h-3 w-3" /> Edit
+                </Button>
+                <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700" onClick={() => setDeleteConfirm(r.id)}>
+                  <Trash2 className="mr-1 h-3 w-3" /> Delete
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}

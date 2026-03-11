@@ -8,6 +8,10 @@ import { sampleAdminDashboard } from "@/lib/sample-data";
 import { SampleDataBanner } from "@/components/shared/SampleDataBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Users,
   TrendingUp,
@@ -20,7 +24,10 @@ import {
   UserPlus,
   Star,
   Trophy,
+  MessageSquare,
+  X,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Metrics {
   activeCustomers: number;
@@ -56,6 +63,14 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [useSample, setUseSample] = useState(false);
 
+  // Feedback state
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackImprovements, setFeedbackImprovements] = useState("");
+  const [feedbackLikes, setFeedbackLikes] = useState("");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/dashboard");
@@ -77,7 +92,6 @@ export default function AdminDashboard() {
         setUseSample(false);
       }
     } catch {
-      // fallback to sample data on error
       setMetrics(sampleAdminDashboard.metrics);
       setPipeline(sampleAdminDashboard.pipeline);
       setActivity(sampleAdminDashboard.activity);
@@ -87,6 +101,63 @@ export default function AdminDashboard() {
   }, [profile?.email]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Check if feedback banner should show
+  useEffect(() => {
+    if (!profile?.created_at) return;
+
+    const dismissed = localStorage.getItem("feedback_dismissed");
+    if (dismissed) return;
+
+    const createdAt = new Date(profile.created_at);
+    const now = new Date();
+    const daysSinceSignup = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceSignup < 7) return;
+
+    // Check if already submitted
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/feedback");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.submitted) {
+          setShowFeedback(true);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [profile?.created_at]);
+
+  function dismissFeedback() {
+    localStorage.setItem("feedback_dismissed", "true");
+    setShowFeedback(false);
+  }
+
+  async function submitFeedback() {
+    if (feedbackRating === 0) {
+      toast.error("Please select a rating.");
+      return;
+    }
+    setSubmittingFeedback(true);
+    try {
+      const res = await fetch("/api/admin/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rating: feedbackRating,
+          improvements: feedbackImprovements || null,
+          likes: feedbackLikes || null,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success("Thanks for your feedback!");
+      setFeedbackDialogOpen(false);
+      setShowFeedback(false);
+      localStorage.setItem("feedback_dismissed", "true");
+    } catch {
+      toast.error("Failed to submit feedback.");
+    }
+    setSubmittingFeedback(false);
+  }
 
   const conversionRate = metrics.totalReferrals > 0
     ? Math.round((metrics.completedReferrals / metrics.totalReferrals) * 100) : 0;
@@ -131,6 +202,27 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       {useSample && <SampleDataBanner />}
+
+      {/* Feedback Banner */}
+      {showFeedback && (
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-teal-200 bg-teal-50 p-4">
+          <div className="flex items-center gap-3">
+            <MessageSquare className="h-5 w-5 text-teal-600 shrink-0" />
+            <p className="text-sm font-medium text-teal-800">
+              You&apos;ve been using Connect Reward for a week! We&apos;d love to hear your feedback.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button size="sm" className="bg-teal-600 hover:bg-teal-700" onClick={() => setFeedbackDialogOpen(true)}>
+              Give Feedback
+            </Button>
+            <button onClick={dismissFeedback} className="text-teal-600 hover:text-teal-800">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
         <p className="text-muted-foreground">Manage your referral program and track performance.</p>
@@ -259,6 +351,64 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Feedback Dialog */}
+      <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Share Your Feedback</DialogTitle>
+            <DialogDescription>
+              Help us improve Connect Reward. Your feedback is invaluable!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium mb-2">How would you rate your experience so far?</p>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setFeedbackRating(n)}
+                    className="p-1 transition-colors"
+                  >
+                    <Star
+                      className={`h-8 w-8 ${n <= feedbackRating ? "text-amber-400 fill-amber-400" : "text-gray-300"}`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">What could be better?</label>
+              <Textarea
+                value={feedbackImprovements}
+                onChange={e => setFeedbackImprovements(e.target.value)}
+                placeholder="Any features you'd like to see, issues you've run into..."
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">What do you like most? (optional)</label>
+              <Textarea
+                value={feedbackLikes}
+                onChange={e => setFeedbackLikes(e.target.value)}
+                placeholder="What's working well for you..."
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFeedbackDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={submitFeedback}
+              disabled={submittingFeedback || feedbackRating === 0}
+              className="bg-teal-600 hover:bg-teal-700"
+            >
+              {submittingFeedback ? "Submitting..." : "Submit Feedback"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -113,8 +113,9 @@ export async function POST(request: NextRequest) {
       turf: "Turf", pest_control: "Pest Control", other: industry_other || "Other",
     };
     const planLabel: Record<string, string> = {
-      free: "Free ($0)", starter: "Starter ($149/mo)", growth: "Growth ($299/mo)",
-      pro: "Pro ($499/mo)", not_sure: "Not sure yet",
+      free: "Free ($0)", beta: "Beta ($99/mo)",
+      starter: "Starter (legacy)", growth: "Growth (legacy)", pro: "Pro (legacy)",
+      not_sure: "Not sure yet",
     };
     const methodLabel: Record<string, string> = {
       none: "No referral program", cash_bonuses: "Cash bonuses", gift_cards: "Gift cards",

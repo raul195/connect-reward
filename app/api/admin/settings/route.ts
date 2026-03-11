@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthContext, requireAdmin } from "@/lib/api-helpers";
+import { isAtLimit } from "@/lib/plan-limits";
+import type { PlanTier } from "@/lib/types";
 
 export async function GET() {
   try {
@@ -96,7 +98,26 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ service });
     } else {
-      // Insert new service
+      // Insert new service — check plan limit first
+      const { data: companyRow } = await admin
+        .from("companies")
+        .select("plan_tier")
+        .eq("id", cid)
+        .single();
+      const plan: PlanTier = (companyRow?.plan_tier as PlanTier) ?? "free";
+
+      const { count: serviceCount } = await admin
+        .from("services")
+        .select("*", { count: "exact", head: true })
+        .eq("company_id", cid);
+
+      if (isAtLimit(plan, "services", serviceCount ?? 0)) {
+        return NextResponse.json(
+          { error: "Service limit reached. Upgrade your plan to add more services." },
+          { status: 403 }
+        );
+      }
+
       const { data: service, error } = await admin
         .from("services")
         .insert({ ...body, company_id: cid })

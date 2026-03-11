@@ -24,9 +24,8 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { UserPlus, MoreHorizontal, Shield, Users, Eye } from "lucide-react";
-import type { Profile } from "@/lib/types";
-
-const TEAM_LIMITS: Record<string, number> = { free: 1, starter: 3, growth: 10, pro: 999 };
+import { PLAN_LIMITS } from "@/lib/plan-limits";
+import type { PlanTier, Profile } from "@/lib/types";
 
 const ROLE_BADGES: Record<string, { label: string; color: string }> = {
   business: { label: "Owner", color: "bg-amber-100 text-amber-700" },
@@ -46,7 +45,7 @@ export default function TeamPage() {
   const [invitePhone, setInvitePhone] = useState("");
   const [inviteRole, setInviteRole] = useState("rep");
 
-  const teamLimit = TEAM_LIMITS[company?.plan_tier ?? "free"] ?? 1;
+  const teamLimit = PLAN_LIMITS[(company?.plan_tier ?? "free") as PlanTier].maxTeamMembers;
   const [useSample, setUseSample] = useState(false);
 
   const fetchMembers = useCallback(async () => {
@@ -120,7 +119,7 @@ export default function TeamPage() {
         </Button>
       </div>
 
-      {isFreePlan && <UpgradeCTA message="Upgrade to Starter to invite team members." />}
+      {isFreePlan && <UpgradeCTA message="Upgrade to Beta to invite team members." />}
 
       {/* Role Permissions */}
       <Card>

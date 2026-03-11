@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, Upload, X, Plus, Pencil, Trash2, GripVertical, HelpCircle } from "lucide-react";
-import type { Service, AutomationTriggerType, EmailAutomationTrigger, TonePreference, TicketCategory } from "@/lib/types";
+import { PLAN_LIMITS } from "@/lib/plan-limits";
+import type { PlanTier, Service, AutomationTriggerType, EmailAutomationTrigger, TonePreference, TicketCategory } from "@/lib/types";
 
 export default function SettingsPage() {
   const { profile } = useProfile();
@@ -337,6 +338,7 @@ export default function SettingsPage() {
     referral_nudge: { label: "Referral follow-up", description: "Check in with customers whose referrals have been pending for 14+ days" },
     milestone_reached: { label: "Milestone celebration", description: "Congratulate customers when they hit referral milestones" },
     program_reminder: { label: "Monthly summary", description: "Send a monthly or quarterly activity recap to all customers" },
+    feedback_request: { label: "Feedback request", description: "Ask business admins for feedback 7 days after signup" },
   };
 
   const SEND_TIMES = Array.from({ length: 11 }, (_, i) => {
@@ -357,6 +359,9 @@ export default function SettingsPage() {
   ];
 
   const isFreePlan = company?.plan_tier === "free";
+  const planTier = (company?.plan_tier ?? "free") as PlanTier;
+  const serviceLimit = PLAN_LIMITS[planTier].maxServices;
+  const atServiceLimit = services.length >= serviceLimit;
 
   return (
     <div className="space-y-6">
@@ -443,7 +448,7 @@ export default function SettingsPage() {
                     Define the services you offer and set the point value for each. When a referral is completed, the customer earns points based on the service selected.
                   </p>
                 </div>
-                <Button onClick={openAddService} className="bg-teal-600 hover:bg-teal-700">
+                <Button onClick={openAddService} disabled={atServiceLimit} className="bg-teal-600 hover:bg-teal-700">
                   <Plus className="mr-2 h-4 w-4" /> Add Service
                 </Button>
               </div>
@@ -460,6 +465,8 @@ export default function SettingsPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground mb-2">{services.length}/{serviceLimit} services used</p>
+                  {atServiceLimit && <UpgradeCTA message={`You've reached your ${serviceLimit}-service limit. Upgrade to add more.`} className="mb-2" />}
                   {services.map(svc => (
                     <div key={svc.id} className={`flex items-center justify-between rounded-lg border p-4 ${!svc.is_active ? "opacity-50" : ""}`}>
                       <div className="flex items-center gap-3">
@@ -699,6 +706,9 @@ export default function SettingsPage() {
 
         {/* Automation Tab */}
         <TabsContent value="automation">
+          {isFreePlan ? (
+            <UpgradeCTA message="Upgrade to Beta to unlock email automation." />
+          ) : (
           <Card>
             <CardHeader>
               <CardTitle>Email Automation</CardTitle>
@@ -851,6 +861,7 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>

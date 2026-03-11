@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendTransactionalEmail } from "@/lib/email/sendEmail";
 import type { AutomationTriggerType, TonePreference } from "@/lib/types";
 import { selectTemplate } from "@/lib/email/selectTemplate";
 import { injectVariables, textToHtml } from "@/lib/email/injectVariables";
@@ -574,6 +575,75 @@ async function processAutomations() {
       console.error(`Automation failed for company ${company.id}:`, message);
       results.push({ company_id: company.id, drafts_created: 0, error: message });
     }
+  }
+
+  // ── Feedback request emails (outside per-company loop) ──
+  // Send to business admins who signed up 7-8 days ago and haven't submitted feedback
+  try {
+    const eightDaysAgo = new Date();
+    eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const { data: eligibleAdmins } = await admin
+      .from("profiles")
+      .select("id, full_name, email, company_id")
+      .in("role", ["business", "business_owner"])
+      .gte("created_at", eightDaysAgo.toISOString())
+      .lt("created_at", sevenDaysAgo.toISOString());
+
+    if (eligibleAdmins) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io";
+
+      for (const adminProfile of eligibleAdmins) {
+        if (!adminProfile.company_id) continue;
+
+        // Check no existing feedback_responses
+        const { count: feedbackCount } = await admin
+          .from("feedback_responses")
+          .select("*", { count: "exact", head: true })
+          .eq("profile_id", adminProfile.id);
+
+        if ((feedbackCount ?? 0) > 0) continue;
+
+        // Check no existing email_logs for feedback_request
+        const { count: emailCount } = await admin
+          .from("email_logs")
+          .select("*", { count: "exact", head: true })
+          .eq("customer_id", adminProfile.id)
+          .eq("template_name", "feedback_request");
+
+        if ((emailCount ?? 0) > 0) continue;
+
+        // Get company info for branding
+        const { data: companyData } = await admin
+          .from("companies")
+          .select("name, logo_url, settings")
+          .eq("id", adminProfile.company_id)
+          .single();
+
+        const companySettings = (companyData?.settings || {}) as Record<string, unknown>;
+        const primaryColor = (companySettings.brandColor as string) || "#0D9488";
+
+        await sendTransactionalEmail({
+          template: "feedback_request",
+          to: adminProfile.email,
+          props: {
+            adminName: adminProfile.full_name,
+            dashboardUrl: `${appUrl}/admin`,
+            companyName: companyData?.name || "Connect Reward",
+            logoUrl: companyData?.logo_url || null,
+            primaryColor,
+          },
+          companyId: adminProfile.company_id,
+          customerId: adminProfile.id,
+          preferences: null,
+          adminClient: admin,
+        });
+      }
+    }
+  } catch (err) {
+    console.error("Feedback email processing failed:", err);
   }
 
   return { results };

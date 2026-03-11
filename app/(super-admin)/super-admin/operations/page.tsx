@@ -61,7 +61,7 @@ const EMAIL_STATUS_COLORS: Record<string, string> = {
   skipped: "bg-gray-100 text-gray-500",
 };
 
-type Tab = "tickets" | "health" | "emails";
+type Tab = "tickets" | "health" | "emails" | "feedback";
 
 // ── Types for joined data ──
 
@@ -90,6 +90,7 @@ export default function OperationsPage() {
             ["tickets", "Tickets"],
             ["health", "Health"],
             ["emails", "Emails"],
+            ["feedback", "Feedback"],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -109,6 +110,7 @@ export default function OperationsPage() {
       {tab === "tickets" && <TicketsTab />}
       {tab === "health" && <HealthTab />}
       {tab === "emails" && <EmailsTab />}
+      {tab === "feedback" && <FeedbackTab />}
     </div>
   );
 }
@@ -604,6 +606,128 @@ function CheckDot({ status }: { status?: string }) {
 // ════════════════════════════════════════════════════════════════
 // Tab 3: Emails
 // ════════════════════════════════════════════════════════════════
+
+interface FeedbackRow {
+  id: string;
+  rating: number;
+  improvements: string | null;
+  likes: string | null;
+  created_at: string;
+  company_name?: string;
+  profile_name?: string;
+  profile_email?: string;
+}
+
+function FeedbackTab() {
+  const [responses, setResponses] = useState<FeedbackRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("feedback_responses")
+          .select("*, profiles(full_name, email), companies(name)")
+          .order("created_at", { ascending: false });
+
+        const mapped: FeedbackRow[] = (data ?? []).map((r) => {
+          const profiles = r.profiles as unknown as { full_name: string; email: string } | null;
+          const companyObj = r.companies as unknown as { name: string } | null;
+          return {
+            id: r.id,
+            rating: r.rating,
+            improvements: r.improvements,
+            likes: r.likes,
+            created_at: r.created_at,
+            company_name: companyObj?.name || "—",
+            profile_name: profiles?.full_name || "—",
+            profile_email: profiles?.email || "—",
+          };
+        });
+
+        setResponses(mapped);
+      } catch {
+        // silently fail
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  const totalResponses = responses.length;
+  const avgRating = totalResponses > 0
+    ? (responses.reduce((sum, r) => sum + r.rating, 0) / totalResponses).toFixed(1)
+    : "—";
+
+  return (
+    <>
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Average Rating</p>
+            <p className="text-2xl font-bold text-amber-600">{avgRating} / 5</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Total Responses</p>
+            <p className="text-2xl font-bold">{totalResponses}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Table */}
+      <Card>
+        <CardContent className="p-0 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left">
+                <th className="p-3 font-medium text-muted-foreground">Company</th>
+                <th className="p-3 font-medium text-muted-foreground">User</th>
+                <th className="p-3 font-medium text-muted-foreground">Rating</th>
+                <th className="p-3 font-medium text-muted-foreground hidden md:table-cell">Improvements</th>
+                <th className="p-3 font-medium text-muted-foreground hidden lg:table-cell">Likes</th>
+                <th className="p-3 font-medium text-muted-foreground hidden sm:table-cell">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}><td colSpan={6} className="p-3"><div className="h-10 animate-pulse rounded bg-muted" /></td></tr>
+                ))
+              ) : responses.length === 0 ? (
+                <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No feedback responses yet.</td></tr>
+              ) : (
+                responses.map((r) => (
+                  <tr key={r.id} className="border-b">
+                    <td className="p-3 font-medium">{r.company_name}</td>
+                    <td className="p-3">
+                      <p>{r.profile_name}</p>
+                      <p className="text-xs text-muted-foreground">{r.profile_email}</p>
+                    </td>
+                    <td className="p-3">
+                      <span className="font-bold text-amber-600">{r.rating}/5</span>
+                    </td>
+                    <td className="p-3 hidden md:table-cell text-muted-foreground max-w-[200px] truncate">
+                      {r.improvements || "—"}
+                    </td>
+                    <td className="p-3 hidden lg:table-cell text-muted-foreground max-w-[200px] truncate">
+                      {r.likes || "—"}
+                    </td>
+                    <td className="p-3 hidden sm:table-cell text-muted-foreground text-xs">
+                      {relativeTime(r.created_at)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+    </>
+  );
+}
 
 function EmailsTab() {
   const [logs, setLogs] = useState<EmailLog[]>([]);

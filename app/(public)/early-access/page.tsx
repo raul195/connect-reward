@@ -76,9 +76,7 @@ const MONTHLY_VOLUMES = [
 
 const PLANS = [
   { value: "free", label: "Free ($0 — just exploring)" },
-  { value: "starter", label: "Starter ($149/mo)" },
-  { value: "growth", label: "Growth ($299/mo)" },
-  { value: "pro", label: "Pro ($499/mo)" },
+  { value: "beta", label: "Beta ($99/mo)" },
   { value: "not_sure", label: "Not sure yet" },
 ];
 
@@ -93,7 +91,7 @@ function EarlyAccessForm() {
   // Pre-select plan from URL param
   useEffect(() => {
     const plan = searchParams.get("plan");
-    if (plan && ["free", "starter", "growth", "pro", "not_sure"].includes(plan)) {
+    if (plan && ["free", "beta", "not_sure"].includes(plan)) {
       setForm(f => ({ ...f, desired_plan: plan }));
     }
   }, [searchParams]);

@@ -64,6 +64,7 @@ const TRIGGER_LABELS: Record<AutomationTriggerType, string> = {
   referral_nudge: "Referral Nudge",
   milestone_reached: "Milestone",
   program_reminder: "Monthly Reminder",
+  feedback_request: "Feedback Request",
 };
 
 const TRIGGER_COLORS: Record<AutomationTriggerType, string> = {
@@ -73,6 +74,7 @@ const TRIGGER_COLORS: Record<AutomationTriggerType, string> = {
   referral_nudge: "bg-blue-100 text-blue-800",
   milestone_reached: "bg-purple-100 text-purple-800",
   program_reminder: "bg-gray-100 text-gray-800",
+  feedback_request: "bg-teal-100 text-teal-800",
 };
 
 const STATUS_COLORS: Record<string, string> = {

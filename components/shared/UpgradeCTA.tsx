@@ -38,7 +38,7 @@ export function UpgradeCTA({
         </p>
       </div>
       <Button asChild size="sm" variant="outline" className="shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/50">
-        <Link href="/admin/settings">Upgrade</Link>
+        <Link href="/admin/billing">Upgrade</Link>
       </Button>
     </div>
   );

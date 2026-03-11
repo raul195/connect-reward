@@ -735,4 +735,122 @@ ${CAN_SPAM}`,
         },
       ],
     },
+
+    // ── feedback_request ──────────────────────────────
+    feedback_request: {
+      friendly: [
+        {
+          subject: "How's it going, {{adminName}}? We'd love your feedback!",
+          body: `Hi {{adminName}},
+
+You've been using Connect Reward for a week now, and we'd love to hear how things are going! Your feedback helps us build a better product for you.
+
+Got a minute? Head to your dashboard and let us know what you think.
+
+{{dashboardUrl}}
+
+${CAN_SPAM}`,
+        },
+        {
+          subject: "{{adminName}}, tell us what you think!",
+          body: `Hey {{adminName}},
+
+It's been a week since you started using Connect Reward — how's everything going? We genuinely want to hear from you!
+
+Your thoughts help us make the platform better for everyone. Pop into your dashboard to share your feedback.
+
+{{dashboardUrl}}
+
+${CAN_SPAM}`,
+        },
+        {
+          subject: "We'd love to hear from you, {{adminName}}!",
+          body: `Hi {{adminName}},
+
+A week in — exciting! We hope you're enjoying Connect Reward so far. We'd really appreciate it if you could take a moment to share your experience with us.
+
+Your feedback means the world to us!
+
+{{dashboardUrl}}
+
+${CAN_SPAM}`,
+        },
+      ],
+      professional: [
+        {
+          subject: "Your feedback on Connect Reward",
+          body: `Dear {{adminName}},
+
+Thank you for using Connect Reward for the past week. We value your experience and would appreciate your feedback on the platform.
+
+Please visit your dashboard to share your thoughts. Your input directly influences our product development.
+
+{{dashboardUrl}}
+
+${CAN_SPAM}`,
+        },
+        {
+          subject: "{{adminName}}, we welcome your feedback",
+          body: `Hello {{adminName}},
+
+It has been one week since you began using Connect Reward. We would appreciate the opportunity to learn about your experience thus far.
+
+Please take a moment to provide your feedback through your dashboard.
+
+{{dashboardUrl}}
+
+${CAN_SPAM}`,
+        },
+        {
+          subject: "Share your experience with Connect Reward",
+          body: `Dear {{adminName}},
+
+As you complete your first week with Connect Reward, we invite you to share your feedback. Your perspective is invaluable in helping us improve the platform.
+
+Please visit your dashboard to submit your review.
+
+{{dashboardUrl}}
+
+${CAN_SPAM}`,
+        },
+      ],
+      motivational: [
+        {
+          subject: "{{adminName}}, your voice matters!",
+          body: `Hey {{adminName}}!
+
+You've been rocking Connect Reward for a whole week! We're thrilled to have you on board, and now we need YOUR help to make the platform even better.
+
+Share your feedback on your dashboard — every response helps us level up!
+
+{{dashboardUrl}}
+
+${CAN_SPAM}`,
+        },
+        {
+          subject: "Help us build something amazing, {{adminName}}!",
+          body: `Hi {{adminName}}!
+
+One week down and we hope you're already seeing the value of Connect Reward! Now it's your turn to shape the future of the platform.
+
+Your feedback is the fuel that drives our improvements. Let us know what you think!
+
+{{dashboardUrl}}
+
+${CAN_SPAM}`,
+        },
+        {
+          subject: "{{adminName}}, be part of the journey!",
+          body: `Hey {{adminName}}!
+
+A week in and you're already making moves with Connect Reward! We'd love to hear what's working, what's not, and what would make your experience even better.
+
+Your feedback isn't just welcome — it's essential. Let's build this together!
+
+{{dashboardUrl}}
+
+${CAN_SPAM}`,
+        },
+      ],
+    },
   };

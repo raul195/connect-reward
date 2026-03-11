@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { Check, X, Crown } from "lucide-react";
 import type { PlanTier } from "@/lib/types";
 
@@ -22,56 +21,34 @@ interface PlanInfo {
 
 const PLANS: Record<PlanTier, PlanInfo> = {
   free: {
-    name: "Free", price: "$0", customers: "15", teamMembers: "1",
+    name: "Free", price: "$0", customers: "50", teamMembers: "1",
     features: [
       { label: "Referral tracking", included: true },
       { label: "Basic dashboard", included: true },
-      { label: "Redemption", included: false },
-      { label: "Custom Rewards", included: false },
-      { label: "Analytics", included: false },
-      { label: "Branding", included: false },
-      { label: "Priority Support", included: false },
+      { label: "Up to 3 rewards", included: true },
+      { label: "Up to 3 services", included: true },
+      { label: "Basic analytics", included: true },
+      { label: "Reports & charts", included: false },
+      { label: "Email automation", included: false },
+      { label: "Custom branding", included: false },
     ],
   },
-  starter: {
-    name: "Starter", price: "$149/mo", customers: "50", teamMembers: "3",
+  beta: {
+    name: "Beta", price: "$99/mo", customers: "200", teamMembers: "5",
     features: [
       { label: "Referral tracking", included: true },
-      { label: "Standard dashboard", included: true },
-      { label: "Redemption", included: true },
-      { label: "Custom Rewards", included: true },
-      { label: "Standard Analytics", included: true },
-      { label: "Logo branding", included: true },
-      { label: "Email Support", included: true },
-    ],
-  },
-  growth: {
-    name: "Growth", price: "$299/mo", customers: "250", teamMembers: "10",
-    features: [
-      { label: "Referral tracking", included: true },
-      { label: "Advanced dashboard", included: true },
-      { label: "Redemption", included: true },
-      { label: "Custom Rewards", included: true },
-      { label: "Advanced Analytics + Export", included: true },
-      { label: "Full branding", included: true },
-      { label: "Priority Support", included: true },
-    ],
-  },
-  pro: {
-    name: "Pro", price: "$499/mo", customers: "Unlimited", teamMembers: "Unlimited",
-    features: [
-      { label: "Referral tracking", included: true },
-      { label: "Advanced dashboard", included: true },
-      { label: "Redemption", included: true },
-      { label: "Custom Rewards", included: true },
-      { label: "Advanced Analytics + Export", included: true },
-      { label: "Full branding", included: true },
-      { label: "Dedicated Support", included: true },
+      { label: "Full dashboard", included: true },
+      { label: "Up to 10 rewards", included: true },
+      { label: "Up to 10 services", included: true },
+      { label: "Full analytics", included: true },
+      { label: "Reports & charts", included: true },
+      { label: "Email automation", included: true },
+      { label: "Custom branding", included: true },
     ],
   },
 };
 
-const PLAN_ORDER: PlanTier[] = ["free", "starter", "growth", "pro"];
+const PLAN_ORDER: PlanTier[] = ["free", "beta"];
 
 export default function BillingPage() {
   const { profile } = useProfile();
@@ -93,8 +70,8 @@ export default function BillingPage() {
   useEffect(() => { fetchUsage(); }, [fetchUsage]);
 
   const currentPlan = company?.plan_tier ?? "free";
-  const planInfo = PLANS[currentPlan];
-  const currentIdx = PLAN_ORDER.indexOf(currentPlan);
+  const planInfo = PLANS[currentPlan as PlanTier] ?? PLANS.free;
+  const currentIdx = PLAN_ORDER.indexOf(currentPlan as PlanTier);
 
   const custLimit = parseInt(planInfo.customers) || 9999;
   const teamLimit = parseInt(planInfo.teamMembers) || 9999;

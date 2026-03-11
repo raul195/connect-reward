@@ -7,7 +7,7 @@ export type ReferralStatus = "submitted" | "contacted" | "consultation_scheduled
 export type RewardCategory = string;
 export type RedemptionStatus = "pending" | "approved" | "fulfilled" | "rejected";
 export type NotificationType = "referral_update" | "reward_earned" | "achievement" | "system";
-export type PlanTier = "free" | "starter" | "growth" | "pro";
+export type PlanTier = "free" | "beta";
 export type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
 export type PointTxType = "referral_completed" | "redemption" | "signup_bonus" | "manual_adjustment" | "milestone_bonus";
 
@@ -231,7 +231,8 @@ export type AutomationTriggerType =
   | "points_close_to_reward"
   | "referral_nudge"
   | "milestone_reached"
-  | "program_reminder";
+  | "program_reminder"
+  | "feedback_request";
 
 export type EmailDraftStatus = "draft" | "approved" | "sent" | "cancelled";
 
@@ -347,7 +348,7 @@ export interface EarlyAccessApplication {
   current_referral_method_other: string | null;
   monthly_referral_volume: MonthlyVolume | null;
   biggest_challenge: string | null;
-  desired_plan: PlanTier | "not_sure" | null;
+  desired_plan: PlanTier | "starter" | "growth" | "pro" | "not_sure" | null;
   how_did_you_hear: string | null;
   status: ApplicationStatus;
   notes: string | null;
@@ -356,4 +357,16 @@ export interface EarlyAccessApplication {
   utm_campaign: string | null;
   submitted_at: string;
   updated_at: string;
+}
+
+// ── Feedback Survey ──
+
+export interface FeedbackResponse {
+  id: string;
+  company_id: string;
+  profile_id: string;
+  rating: number;
+  improvements: string | null;
+  likes: string | null;
+  created_at: string;
 }

@@ -17,9 +17,9 @@ export async function GET() {
     .eq("id", profile.company_id)
     .single();
 
-  // Demo accounts always get "pro" plan so all features are visible
+  // Demo accounts always get "beta" plan so all features are visible
   if (company && isDemoAccount(profile.email)) {
-    company.plan_tier = "pro";
+    company.plan_tier = "beta";
   }
 
   return NextResponse.json({ company });

@@ -19,7 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Lock, Gift, CreditCard, Plane, Monitor, Ticket, Home } from "lucide-react";
+import { Gift, CreditCard, Plane, Monitor, Ticket, Home } from "lucide-react";
 import type { Reward, RewardCategory } from "@/lib/types";
 
 const CATEGORY_ICONS: Record<RewardCategory | string, React.ReactNode> = {
@@ -48,11 +48,8 @@ export default function RewardsCatalog() {
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("all");
   const [redeemDialog, setRedeemDialog] = useState<Reward | null>(null);
-  const [upgradeDialog, setUpgradeDialog] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
   const [userPoints, setUserPoints] = useState(0);
-
-  const isFreePlan = company?.plan_tier === "free";
 
   const [useSample, setUseSample] = useState(false);
 
@@ -162,23 +159,6 @@ export default function RewardsCatalog() {
 
             return (
               <Card key={reward.id} className="relative overflow-hidden">
-                {/* Free plan overlay */}
-                {isFreePlan && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
-                    <div className="text-center">
-                      <Lock className="mx-auto h-8 w-8 text-gray-400" />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2"
-                        onClick={() => setUpgradeDialog(true)}
-                      >
-                        Upgrade to Unlock
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
                 <CardContent className="flex flex-col p-5">
                   <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
                     {CATEGORY_ICONS[reward.category] || <Gift className="h-10 w-10" />}
@@ -194,16 +174,14 @@ export default function RewardsCatalog() {
                     <Badge variant="outline" className="mt-1 w-fit text-xs">{reward.quantity_available} left</Badge>
                   )}
 
-                  {!isFreePlan && (
-                    canAfford ? (
-                      <Button className="mt-4 bg-amber-500 hover:bg-amber-600 text-white" onClick={() => setRedeemDialog(reward)}>
-                        Redeem
-                      </Button>
-                    ) : (
-                      <Button className="mt-4" variant="outline" disabled>
-                        Need {diff.toLocaleString()} more pts
-                      </Button>
-                    )
+                  {canAfford ? (
+                    <Button className="mt-4 bg-amber-500 hover:bg-amber-600 text-white" onClick={() => setRedeemDialog(reward)}>
+                      Redeem
+                    </Button>
+                  ) : (
+                    <Button className="mt-4" variant="outline" disabled>
+                      Need {diff.toLocaleString()} more pts
+                    </Button>
                   )}
                 </CardContent>
               </Card>
@@ -238,23 +216,6 @@ export default function RewardsCatalog() {
         </DialogContent>
       </Dialog>
 
-      {/* Upgrade dialog */}
-      <Dialog open={upgradeDialog} onOpenChange={setUpgradeDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Upgrade Your Plan</DialogTitle>
-            <DialogDescription>
-              Reward redemption is available on paid plans. Upgrade now to start redeeming your points!
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setUpgradeDialog(false)}>Cancel</Button>
-            <Button asChild className="bg-teal-600 hover:bg-teal-700">
-              <a href="/admin/settings">View Plans</a>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -21,9 +21,7 @@ const PAGE_SIZE = 20;
 
 const PLAN_COLORS: Record<string, string> = {
   free: "bg-gray-100 text-gray-700",
-  starter: "bg-blue-100 text-blue-700",
-  growth: "bg-teal-100 text-teal-700",
-  pro: "bg-amber-100 text-amber-700",
+  beta: "bg-teal-100 text-teal-700",
 };
 
 export default function CompaniesPage() {
@@ -90,9 +88,7 @@ export default function CompaniesPage() {
           <SelectContent>
             <SelectItem value="all">All Plans</SelectItem>
             <SelectItem value="free">Free</SelectItem>
-            <SelectItem value="starter">Starter</SelectItem>
-            <SelectItem value="growth">Growth</SelectItem>
-            <SelectItem value="pro">Pro</SelectItem>
+            <SelectItem value="beta">Beta</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -129,9 +125,7 @@ export default function CompaniesPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="free">Free</SelectItem>
-                          <SelectItem value="starter">Starter</SelectItem>
-                          <SelectItem value="growth">Growth</SelectItem>
-                          <SelectItem value="pro">Pro</SelectItem>
+                          <SelectItem value="beta">Beta</SelectItem>
                         </SelectContent>
                       </Select>
                     </td>

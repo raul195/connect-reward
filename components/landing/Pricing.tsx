@@ -7,7 +7,7 @@ import { FadeIn } from "./FadeIn";
 interface PricingPlan {
   name: string;
   price: string;
-  includesFrom?: string;
+  period?: string;
   features: string[];
   cta: string;
   highlighted?: boolean;
@@ -17,73 +17,37 @@ interface PricingPlan {
 const plans: PricingPlan[] = [
   {
     name: "Free",
-    price: "Free",
+    price: "$0",
     features: [
-      "100 customers max",
-      "Referral tracking",
-      "Earn points (cannot redeem)",
-      "Tier 1 only",
-      "1 service type",
+      "50 customers",
+      "25 referrals",
+      "3 rewards & 3 services",
+      "1 team member",
       "Basic analytics",
+      "Referral tracking",
       '"Powered by Connect Reward" branding',
       "Community support",
     ],
-    cta: "Join Waitlist",
+    cta: "Get Started Free",
     href: "/early-access?plan=free",
   },
   {
-    name: "Starter",
-    price: "Coming Soon",
-    includesFrom: "Free",
+    name: "Beta",
+    price: "$99",
+    period: "/mo",
     features: [
-      "Full reward redemption",
-      "Tiers 1-3",
-      "3 service types",
-      "Standard analytics",
-      "Automated email notifications",
-      "Review tracking",
-      "Customer leaderboard",
-      "Add your logo",
-      "3 team members",
-      "Email support",
-    ],
-    cta: "Request Access",
-    highlighted: true,
-    href: "/early-access?plan=starter",
-  },
-  {
-    name: "Growth",
-    price: "Coming Soon",
-    includesFrom: "Starter",
-    features: [
-      "All tiers available",
-      "10 service types",
-      "Advanced analytics",
-      "Full custom branding",
-      "10 team members",
-      "Read-only API access",
-      "1:1 onboarding call",
+      "200 customers",
+      "200 referrals",
+      "10 rewards & 10 services",
+      "5 team members",
+      "Full analytics & reports",
+      "Email automation",
+      "Custom branding",
       "Priority support",
     ],
-    cta: "Request Access",
-    href: "/early-access?plan=growth",
-  },
-  {
-    name: "Pro",
-    price: "Coming Soon",
-    includesFrom: "Growth",
-    features: [
-      "Unlimited service types",
-      "Advanced analytics + export",
-      "Priority notifications + SMS",
-      "White-label (no Connect Reward branding)",
-      "Unlimited team members",
-      "Full API access",
-      "Dedicated onboarding rep",
-      "Dedicated support",
-    ],
-    cta: "Request Access",
-    href: "/early-access?plan=pro",
+    cta: "Join Beta",
+    highlighted: true,
+    href: "/early-access?plan=beta",
   },
 ];
 
@@ -99,11 +63,11 @@ export function Pricing() {
             Simple, Transparent Pricing
           </h2>
           <p className="mt-3 text-lg text-[#64748B]">
-            Start free, scale as you grow
+            Start free, upgrade when you&apos;re ready
           </p>
         </FadeIn>
 
-        <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto mt-14 grid max-w-3xl gap-8 sm:grid-cols-2">
           {plans.map((plan, i) => (
             <FadeIn key={plan.name} delay={i * 0.08}>
               <div
@@ -115,7 +79,7 @@ export function Pricing() {
               >
                 {plan.highlighted && (
                   <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-[#0D9488] px-4 py-1 text-xs font-bold text-white">
-                    Most Popular
+                    Best Value
                   </span>
                 )}
 
@@ -124,17 +88,15 @@ export function Pricing() {
                 </h3>
 
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className={`font-extrabold text-[#1A202C] ${plan.price === "Coming Soon" ? "text-2xl" : "text-4xl"}`}>
+                  <span className="text-4xl font-extrabold text-[#1A202C]">
                     {plan.price}
                   </span>
+                  {plan.period && (
+                    <span className="text-lg text-[#64748B]">{plan.period}</span>
+                  )}
                 </div>
 
                 <ul className="mt-6 flex-1 space-y-3">
-                  {plan.includesFrom && (
-                    <li className="text-sm italic text-[#94A3B8] pb-1">
-                      Everything in {plan.includesFrom}, plus:
-                    </li>
-                  )}
                   {plan.features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-sm">
                       <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#0D9488]" />

@@ -47,7 +47,7 @@ const METHOD_LABELS: Record<string, string> = {
 };
 
 const PLAN_LABELS: Record<string, string> = {
-  free: "Free", starter: "Starter", growth: "Growth", pro: "Pro", not_sure: "Not sure",
+  free: "Free", beta: "Beta", starter: "Starter", growth: "Growth", pro: "Pro", not_sure: "Not sure",
 };
 
 const PAGE_SIZE = 20;
