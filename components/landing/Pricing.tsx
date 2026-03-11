@@ -37,9 +37,9 @@ const plans: PricingPlan[] = [
     period: "/mo",
     features: [
       "200 customers",
-      "200 referrals",
+      "Unlimited referrals",
       "10 rewards & 10 services",
-      "5 team members",
+      "3 team members",
       "Full analytics & reports",
       "Email automation",
       "Custom branding",

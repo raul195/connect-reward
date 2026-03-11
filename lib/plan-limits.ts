@@ -29,11 +29,11 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     prioritySupport: false,
   },
   beta: {
-    maxReferrals: 200,
+    maxReferrals: Infinity,
     maxRewards: 10,
     maxCustomers: 200,
     maxServices: 10,
-    maxTeamMembers: 5,
+    maxTeamMembers: 3,
     customBranding: true,
     analytics: true,
     reports: true,

@@ -34,7 +34,7 @@ const PLANS: Record<PlanTier, PlanInfo> = {
     ],
   },
   beta: {
-    name: "Beta", price: "$99/mo", customers: "200", teamMembers: "5",
+    name: "Beta", price: "$99/mo", customers: "200", teamMembers: "3",
     features: [
       { label: "Referral tracking", included: true },
       { label: "Full dashboard", included: true },
