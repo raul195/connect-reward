@@ -12,10 +12,12 @@ BEGIN
 END
 $$;
 
--- 2. Migrate existing paid plans to 'beta'
+-- 2. Drop check constraint on plan_tier if it exists (may have been added outside migrations)
+ALTER TABLE companies DROP CONSTRAINT IF EXISTS companies_plan_tier_check;
+
+-- 3. Migrate existing paid plans to 'beta'
 -- Note: 'starter', 'growth', 'pro' remain in the DB enum (Postgres can't remove enum values)
 -- but TypeScript enforces "free" | "beta" only.
--- Column name is "plan", not "plan_tier"
 UPDATE companies SET plan_tier = 'beta' WHERE plan_tier IN ('starter', 'growth', 'pro');
 
 -- 3. Create feedback_responses table
