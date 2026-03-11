@@ -1,13 +1,22 @@
 -- 015: Plan simplification (free + beta) and feedback survey
 -- Adds 'beta' enum value, migrates existing paid plans, creates feedback_responses table
 
--- 1. Add 'beta' to plan_tier enum
-ALTER TYPE plan_tier ADD VALUE IF NOT EXISTS 'beta';
+-- 1. Ensure plan_tier enum exists (in case migrations were applied out of order)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'plan_tier') THEN
+    CREATE TYPE plan_tier AS ENUM ('free', 'starter', 'growth', 'pro', 'beta');
+  ELSE
+    ALTER TYPE plan_tier ADD VALUE IF NOT EXISTS 'beta';
+  END IF;
+END
+$$;
 
 -- 2. Migrate existing paid plans to 'beta'
 -- Note: 'starter', 'growth', 'pro' remain in the DB enum (Postgres can't remove enum values)
 -- but TypeScript enforces "free" | "beta" only.
-UPDATE companies SET plan_tier = 'beta' WHERE plan_tier IN ('starter', 'growth', 'pro');
+-- Column name is "plan", not "plan_tier"
+UPDATE companies SET plan = 'beta' WHERE plan IN ('starter', 'growth', 'pro');
 
 -- 3. Create feedback_responses table
 CREATE TABLE IF NOT EXISTS feedback_responses (
