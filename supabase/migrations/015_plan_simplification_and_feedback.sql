@@ -16,7 +16,7 @@ $$;
 -- Note: 'starter', 'growth', 'pro' remain in the DB enum (Postgres can't remove enum values)
 -- but TypeScript enforces "free" | "beta" only.
 -- Column name is "plan", not "plan_tier"
-UPDATE companies SET plan = 'beta' WHERE plan IN ('starter', 'growth', 'pro');
+UPDATE companies SET plan_tier = 'beta' WHERE plan_tier IN ('starter', 'growth', 'pro');
 
 -- 3. Create feedback_responses table
 CREATE TABLE IF NOT EXISTS feedback_responses (
