@@ -2,11 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Sun, Home, Wind, Bug, SquareStack, HelpCircle, Plus, X, ArrowRight, ArrowLeft, Check, Loader2 } from "lucide-react";
+import { Sparkles, Sun, Home, Wind, Bug, SquareStack, HelpCircle, Plus, X, ArrowRight, ArrowLeft, Check, Loader2, CreditCard, Shield } from "lucide-react";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
+
+const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
 
 // ── Types ──
 
@@ -83,7 +88,9 @@ const REVIEW_PLATFORMS: ReviewPlatform[] = [
   { id: "facebook", name: "Facebook", icon: "👍", defaultPoints: 300 },
 ];
 
-const TOTAL_STEPS = 5;
+const BILLING_STEP = 5;
+const SUMMARY_STEP = 6;
+const MAX_STEPS = 6;
 
 let nextId = 0;
 function uid() {
@@ -112,6 +119,26 @@ export default function OnboardingPage() {
     Object.fromEntries(REVIEW_PLATFORMS.map((p) => [p.id, p.defaultPoints]))
   );
 
+  // Step 5 — Billing
+  const [planTier, setPlanTier] = useState<string>("free");
+  const [planName, setPlanName] = useState<string>("Free");
+  const [planPrice, setPlanPrice] = useState<string>("$0");
+  const [billingComplete, setBillingComplete] = useState(false);
+
+  // Whether to show the billing step (non-free plan + Stripe configured)
+  const showBilling = planTier !== "free" && !!stripePromise;
+  const totalSteps = showBilling ? MAX_STEPS : MAX_STEPS - 1;
+
+  // Map visual step to actual step (skip billing step for free plans)
+  function actualStep(visualStep: number): number {
+    if (showBilling) return visualStep;
+    // If billing is hidden, visual step 5 maps to actual step 6 (summary)
+    if (visualStep >= BILLING_STEP) return visualStep + 1;
+    return visualStep;
+  }
+
+  const currentActualStep = actualStep(step);
+
   // Check if already onboarded
   const checkStatus = useCallback(async () => {
     try {
@@ -120,6 +147,14 @@ export default function OnboardingPage() {
       const { data } = await res.json();
       if (data?.onboarding_completed) {
         router.replace("/admin");
+        return;
+      }
+      if (data?.plan_tier) {
+        setPlanTier(data.plan_tier);
+        if (data.plan_tier === "beta") {
+          setPlanName("Beta");
+          setPlanPrice("$99/mo");
+        }
       }
     } catch {
       // ignore
@@ -134,7 +169,7 @@ export default function OnboardingPage() {
   // ── Step navigation ──
 
   function canProceed(): boolean {
-    switch (step) {
+    switch (currentActualStep) {
       case 1:
         return selectedIndustries.length > 0 && (!selectedIndustries.includes("other") || otherIndustry.trim().length > 0);
       case 2:
@@ -143,7 +178,9 @@ export default function OnboardingPage() {
         return true;
       case 4:
         return true;
-      case 5:
+      case BILLING_STEP:
+        return billingComplete;
+      case SUMMARY_STEP:
         return true;
       default:
         return false;
@@ -154,7 +191,7 @@ export default function OnboardingPage() {
     if (!canProceed()) return;
 
     // When leaving step 1, initialize services from suggestions for new industries
-    if (step === 1) {
+    if (currentActualStep === 1) {
       const existingIndustries = new Set(services.map((s) => s.industry));
       const newServices = [...services];
       for (const ind of selectedIndustries) {
@@ -176,7 +213,7 @@ export default function OnboardingPage() {
       setServices(filtered);
     }
 
-    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+    setStep((s) => Math.min(s + 1, totalSteps));
   }
 
   function goBack() {
@@ -297,7 +334,7 @@ export default function OnboardingPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-medium text-muted-foreground">
-            Step {step} of {TOTAL_STEPS}
+            Step {step} of {totalSteps}
           </p>
           <span className="flex items-center gap-1.5 text-sm font-semibold text-[#0D9488]">
             <Sparkles className="h-4 w-4" />
@@ -307,14 +344,14 @@ export default function OnboardingPage() {
         <div className="h-2 rounded-full bg-gray-100">
           <div
             className="h-2 rounded-full bg-[#0D9488] transition-all duration-300"
-            style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
+            style={{ width: `${(step / totalSteps) * 100}%` }}
           />
         </div>
       </div>
 
       {/* Step content */}
       <div className="min-h-[420px]">
-        {step === 1 && (
+        {currentActualStep === 1 && (
           <StepIndustry
             selected={selectedIndustries}
             onToggle={toggleIndustry}
@@ -322,7 +359,7 @@ export default function OnboardingPage() {
             onOtherChange={setOtherIndustry}
           />
         )}
-        {step === 2 && (
+        {currentActualStep === 2 && (
           <StepServices
             industries={selectedIndustries}
             services={services}
@@ -333,7 +370,7 @@ export default function OnboardingPage() {
             otherLabel={otherIndustry}
           />
         )}
-        {step === 3 && (
+        {currentActualStep === 3 && (
           <StepRewards
             services={services}
             onUpdateService={updateService}
@@ -342,13 +379,21 @@ export default function OnboardingPage() {
             averageReward={getAverageReward()}
           />
         )}
-        {step === 4 && (
+        {currentActualStep === 4 && (
           <StepReviews
             rewards={reviewRewards}
             onUpdate={(id, val) => setReviewRewards((prev) => ({ ...prev, [id]: val }))}
           />
         )}
-        {step === 5 && (
+        {currentActualStep === BILLING_STEP && (
+          <StepBilling
+            planName={planName}
+            planPrice={planPrice}
+            onComplete={() => setBillingComplete(true)}
+            isComplete={billingComplete}
+          />
+        )}
+        {currentActualStep === SUMMARY_STEP && (
           <StepSummary
             industries={selectedIndustries.map((id) =>
               id === "other" ? otherIndustry.trim() : INDUSTRIES.find((i) => i.id === id)?.label || id
@@ -359,6 +404,7 @@ export default function OnboardingPage() {
               max: services.length > 0 ? Math.max(...services.map(getRewardPoints)) : 0,
             }}
             reviewRewards={reviewRewards}
+            planName={planName}
           />
         )}
       </div>
@@ -374,7 +420,7 @@ export default function OnboardingPage() {
           <div />
         )}
 
-        {step < TOTAL_STEPS ? (
+        {step < totalSteps ? (
           <Button
             onClick={goNext}
             disabled={!canProceed()}
@@ -691,16 +737,178 @@ function StepReviews({
   );
 }
 
+function StepBilling({
+  planName,
+  planPrice,
+  onComplete,
+  isComplete,
+}: {
+  planName: string;
+  planPrice: string;
+  onComplete: () => void;
+  isComplete: boolean;
+}) {
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function createSetupIntent() {
+      try {
+        const res = await fetch("/api/admin/billing/setup-intent", {
+          method: "POST",
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          setError(err.error || "Failed to load payment form");
+          setLoading(false);
+          return;
+        }
+        const { data } = await res.json();
+        setClientSecret(data.clientSecret);
+      } catch {
+        setError("Failed to load payment form");
+      }
+      setLoading(false);
+    }
+    createSetupIntent();
+  }, []);
+
+  return (
+    <div>
+      <h1 className="text-2xl font-extrabold text-[#1A202C] sm:text-3xl">
+        Add a payment method
+      </h1>
+      <p className="mt-2 text-[#64748B]">
+        Your card will be charged monthly based on your plan. You won&apos;t be charged until your trial ends.
+      </p>
+
+      {/* Plan summary */}
+      <div className="mt-6 flex items-center justify-between rounded-lg border border-teal-200 bg-teal-50 p-4">
+        <div className="flex items-center gap-3">
+          <CreditCard className="h-5 w-5 text-[#0D9488]" />
+          <div>
+            <p className="font-semibold text-[#1A202C]">{planName} Plan</p>
+            <p className="text-sm text-[#64748B]">Billed monthly</p>
+          </div>
+        </div>
+        <p className="text-xl font-bold text-[#1A202C]">{planPrice}</p>
+      </div>
+
+      {/* Stripe form */}
+      <div className="mt-8">
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 animate-spin text-[#0D9488]" />
+          </div>
+        )}
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+        {clientSecret && stripePromise && (
+          <Elements
+            stripe={stripePromise}
+            options={{
+              clientSecret,
+              appearance: {
+                theme: "stripe",
+                variables: {
+                  colorPrimary: "#0D9488",
+                  borderRadius: "8px",
+                },
+              },
+            }}
+          >
+            <BillingForm onComplete={onComplete} isComplete={isComplete} />
+          </Elements>
+        )}
+      </div>
+
+      <div className="mt-6 flex items-center gap-2 text-xs text-[#64748B]">
+        <Shield className="h-4 w-4" />
+        Payments are securely processed by Stripe. We never store your card details.
+      </div>
+    </div>
+  );
+}
+
+function BillingForm({
+  onComplete,
+  isComplete,
+}: {
+  onComplete: () => void;
+  isComplete: boolean;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!stripe || !elements || isComplete) return;
+
+    setSubmitting(true);
+    setError(null);
+
+    const result = await stripe.confirmSetup({
+      elements,
+      redirect: "if_required",
+    });
+
+    if (result.error) {
+      setError(result.error.message || "Payment setup failed");
+      setSubmitting(false);
+    } else {
+      toast.success("Payment method added");
+      onComplete();
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <PaymentElement />
+      {error && (
+        <p className="mt-3 text-sm text-red-600">{error}</p>
+      )}
+      <Button
+        type="submit"
+        disabled={!stripe || submitting || isComplete}
+        className="mt-6 w-full gap-2 bg-[#0D9488] hover:bg-[#0f766e]"
+      >
+        {isComplete ? (
+          <>
+            <Check className="h-4 w-4" />
+            Card saved
+          </>
+        ) : submitting ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Saving...
+          </>
+        ) : (
+          "Save payment method"
+        )}
+      </Button>
+    </form>
+  );
+}
+
 function StepSummary({
   industries,
   serviceCount,
   rewardRange,
   reviewRewards,
+  planName,
 }: {
   industries: string[];
   serviceCount: number;
   rewardRange: { min: number; max: number };
   reviewRewards: Record<string, number>;
+  planName: string;
 }) {
   return (
     <div>
@@ -740,6 +948,7 @@ function StepSummary({
             ))}
           </div>
         </div>
+        <SummaryRow label="Plan" value={planName} />
       </div>
     </div>
   );
