@@ -2,6 +2,7 @@ import type { LoyaltyTier } from "./types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendTransactionalEmail } from "./email/sendEmail";
 import { applyPromotionMultiplier } from "./promotions";
+import { checkAndAwardAchievements } from "./achievements-engine";
 
 export const TIER_THRESHOLDS: Record<LoyaltyTier, number> = {
   bronze: 0,
@@ -175,7 +176,10 @@ export async function awardReferralCompletion(
     body: `Your referral for ${referral.referral_name}'s installation is complete! +${basePoints} points earned.`,
   });
 
-  // 8. Send points earned email (fire-and-forget)
+  // 8. Check achievements (tier changes, referral milestones)
+  checkAndAwardAchievements(profile.id, referral.company_id, supabase).catch(() => {});
+
+  // 9. Send points earned email (fire-and-forget)
   const { data: customerProfile } = await supabase
     .from("profiles")
     .select("email, full_name, notification_preferences")
@@ -251,7 +255,10 @@ export async function manualPointAdjustment(
     .update({ total_points: newTotal, tier: newTier })
     .eq("id", userId);
 
-  // 3. Notify customer
+  // 3. Check achievements (tier changes)
+  checkAndAwardAchievements(userId, companyId, supabase).catch(() => {});
+
+  // 4. Notify customer
   await supabase.from("notifications").insert({
     user_id: userId,
     type: "reward_earned",
@@ -259,7 +266,7 @@ export async function manualPointAdjustment(
     body: `${amount > 0 ? "+" : ""}${amount} points: ${reason || "Manual adjustment"}`,
   });
 
-  // 4. Send points earned email (fire-and-forget, only for positive adjustments)
+  // 5. Send points earned email (fire-and-forget, only for positive adjustments)
   if (amount > 0) {
     const { data: customerData } = await supabase
       .from("profiles")
@@ -367,6 +374,9 @@ export async function awardReviewPoints(
     title: "Review Verified!",
     body: `Your review has been verified. +${multipliedReviewPts} points earned!`,
   });
+
+  // Check achievements (left_review, tier changes)
+  checkAndAwardAchievements(review.user_id, review.company_id, supabase).catch(() => {});
 
   // Send points earned email (fire-and-forget)
   if (profile) {

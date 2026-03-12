@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/api-helpers";
+import { checkAndAwardAchievements } from "@/lib/achievements-engine";
 
 export async function GET() {
   const result = await getAuthContext();
@@ -114,6 +115,9 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+
+  // Check achievements (first_referral_submitted, quick_start, etc.)
+  checkAndAwardAchievements(user.id, profile.company_id!, admin).catch(() => {});
 
   return NextResponse.json({ success: true });
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuthContext, requireAdmin } from "@/lib/api-helpers";
 import { awardReferralCompletion } from "@/lib/points";
 import { sendTransactionalEmail } from "@/lib/email/sendEmail";
+import { checkAndAwardAchievements } from "@/lib/achievements-engine";
 
 export async function GET(request: Request) {
   try {
@@ -93,6 +94,16 @@ export async function PUT(request: Request) {
     if (status === "installation_complete") {
       // Award points using the shared helper
       await awardReferralCompletion(id, admin);
+
+      // Check achievements for the referral submitter
+      const { data: ref } = await admin
+        .from("referrals")
+        .select("submitted_by")
+        .eq("id", id)
+        .single();
+      if (ref) {
+        checkAndAwardAchievements(ref.submitted_by, cid, admin).catch(() => {});
+      }
     } else {
       // Update referral status
       await admin
