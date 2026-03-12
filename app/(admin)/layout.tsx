@@ -1,10 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Sidebar, type NavItem } from "@/components/shared/Sidebar";
 import { Header } from "@/components/shared/Header";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { DemoModeBanner } from "@/components/shared/DemoModeBanner";
 import { useProfile } from "@/hooks/useProfile";
+import { useCompany } from "@/hooks/useCompany";
 
 const adminNav: NavItem[] = [
   {
@@ -85,6 +88,30 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const { profile } = useProfile();
+  const { company, loading: companyLoading } = useCompany(profile?.company_id);
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const isOnboarding = pathname.startsWith("/admin/onboarding");
+
+  useEffect(() => {
+    if (companyLoading || !profile || !company) return;
+    if (!company.onboarding_completed && !isOnboarding) {
+      router.replace("/admin/onboarding");
+    }
+    if (company.onboarding_completed && isOnboarding) {
+      router.replace("/admin");
+    }
+  }, [company, companyLoading, profile, isOnboarding, router]);
+
+  // Show onboarding page without the sidebar/header chrome
+  if (isOnboarding) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC]">
+        <ErrorBoundary>{children}</ErrorBoundary>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">

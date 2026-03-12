@@ -23,6 +23,7 @@ export interface Company {
   branding: Record<string, unknown> | null;
   settings: Record<string, unknown>;
   customer_count: number;
+  onboarding_completed: boolean;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -89,6 +90,9 @@ export interface Service {
   company_id: string;
   name: string;
   description: string | null;
+  industry: string | null;
+  job_value: number | null;
+  referral_percentage: number | null;
   points_value: number;
   is_active: boolean;
   display_order: number;
