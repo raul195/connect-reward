@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
             <strong>How they heard about us:</strong> ${how_did_you_hear || "—"}
           </p>
           <hr style="margin: 24px 0; border: none; border-top: 1px solid #E2E8F0;" />
-          <p><a href="${process.env.NEXT_PUBLIC_SITE_URL || ""}/super-admin/applications" style="color: #0D9488;">View in dashboard →</a></p>
+          <p><a href="${process.env.NEXT_PUBLIC_APP_URL || ""}/super-admin/applications" style="color: #0D9488;">View in dashboard →</a></p>
         </div>
       `,
     );

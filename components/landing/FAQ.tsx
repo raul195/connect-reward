@@ -18,7 +18,7 @@ const faqs = [
   {
     question: "What does it cost?",
     answer:
-      "We're currently in early access and finalizing pricing. Request access to be the first to know when we launch and lock in early adopter rates.",
+      "Connect Reward offers a Free plan and a Beta plan at $99/month. We're currently in early access — request access to lock in early adopter rates.",
   },
   {
     question: "What industries does Connect Reward support?",

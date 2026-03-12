@@ -14,7 +14,7 @@ export async function sendEmail({
 }) {
   try {
     await resend.emails.send({
-      from: process.env.EMAIL_FROM || "Connect Reward <noreply@connectreward.com>",
+      from: process.env.EMAIL_FROM || "Connect Reward <noreply@connectreward.io>",
       to,
       subject,
       html,

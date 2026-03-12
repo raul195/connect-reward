@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing email or name." }, { status: 400 });
     }
 
-    const signupUrl = `${process.env.NEXT_PUBLIC_SITE_URL || ""}/signup?role=business&invite=approved&email=${encodeURIComponent(email)}`;
+    const signupUrl = `${process.env.NEXT_PUBLIC_APP_URL || ""}/signup?role=business&invite=approved&email=${encodeURIComponent(email)}`;
 
     await sendEmail({
       to: email,
