@@ -6,6 +6,18 @@ export const metadata: Metadata = {
   title: "Terms of Service",
   description:
     "Connect Reward terms of service — the rules and guidelines for using our platform.",
+  alternates: { canonical: "/terms" },
+  openGraph: {
+    title: "Terms of Service | Connect Reward",
+    description:
+      "The rules and guidelines for using the Connect Reward platform.",
+    url: "/terms",
+  },
+  twitter: {
+    title: "Terms of Service | Connect Reward",
+    description:
+      "The rules and guidelines for using the Connect Reward platform.",
+  },
 };
 
 export default function TermsPage() {

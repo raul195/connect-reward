@@ -16,13 +16,16 @@ const inter = Inter({
   display: "swap",
 });
 
+const META_TITLE = "Connect Reward — Referral Rewards for Home Service Businesses";
+const META_DESCRIPTION =
+  "Turn your happy customers into your best sales reps. Gamified referral rewards for solar, roofing, HVAC, and more.";
+
 export const metadata: Metadata = {
   title: {
-    default: "Connect Reward — Gamified Referral Rewards for Home Service Businesses",
+    default: META_TITLE,
     template: "%s | Connect Reward",
   },
-  description:
-    "Turn happy customers into your best salespeople. Reward referrals with points, tiers, and prizes. Built for solar, roofing, HVAC, and more.",
+  description: META_DESCRIPTION,
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io"),
   icons: {
     icon: [
@@ -34,17 +37,28 @@ export const metadata: Metadata = {
   },
   manifest: "/manifest.json",
   openGraph: {
-    title: "Connect Reward",
-    description:
-      "Gamified referral rewards for home service businesses. Points, tiers, and prizes that keep your customers coming back.",
-    type: "website",
+    title: META_TITLE,
+    description: META_DESCRIPTION,
+    url: "https://connectreward.io",
     siteName: "Connect Reward",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Connect Reward",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Connect Reward",
-    description:
-      "Gamified referral rewards for home service businesses.",
+    title: META_TITLE,
+    description: META_DESCRIPTION,
+    images: ["/og-image.png"],
+  },
+  alternates: {
+    canonical: "/",
   },
   robots: {
     index: true,
