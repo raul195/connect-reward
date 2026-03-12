@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Sparkles } from "lucide-react";
 
 export function Footer() {
@@ -12,8 +13,16 @@ export function Footer() {
             Connect Reward
           </span>
         </div>
+        <div className="flex items-center gap-6">
+          <Link href="/privacy" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+            Privacy Policy
+          </Link>
+          <Link href="/terms" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">
+            Terms of Service
+          </Link>
+        </div>
         <p className="text-sm text-gray-400">
-          &copy; 2025 Connect Reward. All rights reserved.
+          &copy; {new Date().getFullYear()} Connect Reward. All rights reserved.
         </p>
       </div>
     </footer>
