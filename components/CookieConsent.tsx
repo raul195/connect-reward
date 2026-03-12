@@ -16,6 +16,9 @@ export function CookieConsent() {
   function respond(value: "accepted" | "declined") {
     localStorage.setItem(STORAGE_KEY, value);
     setVisible(false);
+    if (value === "accepted") {
+      window.dispatchEvent(new Event("cookie_consent_accepted"));
+    }
   }
 
   if (!visible) return null;
