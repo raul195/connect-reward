@@ -370,3 +370,170 @@ export interface FeedbackResponse {
   likes: string | null;
   created_at: string;
 }
+
+// ── CatalogAPI v2 Types ──
+
+export interface CatalogSocket {
+  socket_id: number;
+  socket_name: string;
+  currency: string;
+  region: string;
+  language: string;
+  point_to_currency_ratio: string;
+  features: Record<string, unknown>;
+}
+
+export interface CatalogCategory {
+  category_id: number;
+  display_name: string;
+  num_items: number;
+  is_root: boolean;
+  parent_id: number | null;
+  categories: CatalogCategory[];
+}
+
+export interface CatalogBrand {
+  brand_id: number;
+  display_name: string;
+  num_items: number;
+}
+
+export interface CatalogTag {
+  tag_id: number;
+  display_name: string;
+  num_items: number;
+  discount_percent: string | null;
+}
+
+export interface CatalogItemImage {
+  image_75_1_1?: string;
+  image_150_1_1?: string;
+  image_300_1_1?: string;
+  image_500_1_1?: string;
+  image_75_3_2?: string;
+  image_150_3_2?: string;
+  image_300_3_2?: string;
+  image_500_3_2?: string;
+}
+
+export interface CatalogItem {
+  catalog_item_id: number;
+  name: string;
+  description: string;
+  model: string;
+  brand: string;
+  brand_id: number;
+  category_ids: number[];
+  tag_ids: number[];
+  item_type_id: number;
+  availability: string;
+  is_available: boolean;
+  is_limited_stock: boolean;
+  is_primary: boolean;
+  is_taxable: boolean;
+  is_explicit: boolean;
+  fulfillment_type: "physical" | "digital";
+  price: string;
+  original_price: string;
+  retail_price: string;
+  points: number;
+  original_points: number;
+  shipping_estimate: string;
+  images: CatalogItemImage;
+  product_id: string;
+  product_options: Record<string, unknown[]>;
+  rank: number;
+  required_fields: Record<string, boolean>;
+  supplier_id: number;
+  supplier_reference_id: string;
+}
+
+export interface CatalogCartLineItem extends CatalogItem {
+  line_item_id: string;
+  metadata: Record<string, string>;
+  errors: string[];
+  is_stock_reserved: boolean;
+  stock_reserved_until: string | null;
+}
+
+export interface CatalogCart {
+  cart_version: string;
+  external_user_id: string;
+  socket_id: number;
+  currency: string;
+  is_locked: boolean;
+  line_items: CatalogCartLineItem[];
+  metadata: Record<string, string>;
+  address_1: string;
+  address_2: string;
+  address_3: string;
+  address_4: string;
+  city: string;
+  state_or_region: string;
+  postal_code: string;
+  country: string;
+  given_name: string;
+  surname: string;
+  email: string;
+  phone_number: string;
+  total: string;
+  total_line_items: number;
+  unique_item_count: number;
+}
+
+export interface CatalogOrderFulfillment {
+  fulfillment_id: string;
+  line_item_ids: string[];
+  fulfillment_type: "physical" | "digital";
+  created_at: string;
+  updated_at: string;
+  shipped_date: string | null;
+  delivered_date: string | null;
+  shipper: string | null;
+  tracking_number: string | null;
+  virtual_code_link: string | null;
+  virtual_code_pin: string | null;
+  fulfillment_instructions: string | null;
+}
+
+export type CatalogOrderLineItemStatus = "new" | "pending" | "exported" | "fulfilled" | "cancelled" | "backordered" | "rejected";
+
+export interface CatalogOrderLineItem extends CatalogCartLineItem {
+  status: CatalogOrderLineItemStatus;
+  points_paid: number;
+  price_paid: string;
+  tax_paid: string;
+  shipping_paid: string;
+}
+
+export interface CatalogOrder {
+  order_number: string;
+  external_order_id: string;
+  socket_id: number;
+  external_user_id: string;
+  created: string;
+  updated: string;
+  given_name: string;
+  surname: string;
+  address_1: string;
+  address_2: string;
+  address_3: string;
+  address_4: string;
+  city: string;
+  state_or_region: string;
+  postal_code: string;
+  country: string;
+  email: string;
+  phone_number: string;
+  is_test: boolean;
+  line_items: CatalogOrderLineItem[];
+  fulfillments: CatalogOrderFulfillment[];
+}
+
+export interface CatalogStockInfo {
+  catalog_item_id: number;
+  available: boolean;
+  quantity_available: number | null;
+  estimated_ship_date: string | null;
+  last_updated: string;
+}

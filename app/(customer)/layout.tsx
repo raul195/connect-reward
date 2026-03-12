@@ -15,7 +15,7 @@ import {
   Bell,
   User,
   BarChart3,
-
+  Store,
 } from "lucide-react";
 import { DemoModeBanner } from "@/components/shared/DemoModeBanner";
 
@@ -39,6 +39,11 @@ const customerNav: NavItem[] = [
     label: "Rewards",
     href: "/dashboard/rewards",
     icon: <Gift className="h-5 w-5" />,
+  },
+  {
+    label: "Store",
+    href: "/dashboard/store",
+    icon: <Store className="h-5 w-5" />,
   },
   {
     label: "Reviews",
