@@ -277,6 +277,64 @@ function QuickActions() {
   );
 }
 
+// ── Review Links ───────────────────────────────
+interface ReviewLink {
+  platform: string;
+  url: string;
+  label: string | null;
+  display_order: number;
+}
+
+const PLATFORM_INFO: Record<string, { name: string; icon: string; color: string }> = {
+  google: { name: "Google", icon: "\u{1F50D}", color: "bg-blue-100 text-blue-700 hover:bg-blue-200" },
+  yelp: { name: "Yelp", icon: "\u{2B50}", color: "bg-red-100 text-red-700 hover:bg-red-200" },
+  bbb: { name: "BBB", icon: "\u{1F3DB}\uFE0F", color: "bg-sky-100 text-sky-700 hover:bg-sky-200" },
+  facebook: { name: "Facebook", icon: "\u{1F44D}", color: "bg-indigo-100 text-indigo-700 hover:bg-indigo-200" },
+  trustpilot: { name: "Trustpilot", icon: "\u{2705}", color: "bg-green-100 text-green-700 hover:bg-green-200" },
+  other: { name: "Review", icon: "\u{1F517}", color: "bg-gray-100 text-gray-700 hover:bg-gray-200" },
+};
+
+function ReviewLinksSection({ links }: { links: ReviewLink[] }) {
+  if (links.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <MessageSquare className="h-5 w-5" />
+          Leave Us a Review
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground mb-4">
+          Love our service? We&apos;d appreciate a review on any of these platforms:
+        </p>
+        <div className="flex flex-wrap gap-3">
+          {links.map((link) => {
+            const info = PLATFORM_INFO[link.platform] ?? PLATFORM_INFO.other;
+            const displayName = link.platform === "other" && link.label
+              ? link.label
+              : info.name;
+
+            return (
+              <a
+                key={link.platform}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${info.color}`}
+              >
+                <span className="text-lg">{info.icon}</span>
+                {displayName}
+              </a>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Points Guide ────────────────────────────────
 function PointsGuide({ services }: { services: Service[] }) {
   if (services.length === 0) return null;
@@ -320,9 +378,20 @@ export default function CustomerDashboard() {
     pointsThisMonth: 0,
     rewardsRedeemed: 0,
   });
+  const [reviewLinks, setReviewLinks] = useState<ReviewLink[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [useSample, setUseSample] = useState(false);
+
+  const fetchReviewLinks = useCallback(async () => {
+    try {
+      const res = await fetch("/api/customer/review-links");
+      if (res.ok) {
+        const { data } = await res.json();
+        setReviewLinks(data ?? []);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -363,7 +432,8 @@ export default function CustomerDashboard() {
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    fetchReviewLinks();
+  }, [fetchData, fetchReviewLinks]);
 
   if (loading) {
     return (
@@ -419,6 +489,7 @@ export default function CustomerDashboard() {
         <QuickActions />
       </div>
       <PointsGuide services={services} />
+      <ReviewLinksSection links={reviewLinks} />
     </div>
   );
 }

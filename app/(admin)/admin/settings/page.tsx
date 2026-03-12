@@ -22,7 +22,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, Upload, X, Plus, Pencil, Trash2, GripVertical, HelpCircle } from "lucide-react";
+import { Save, Upload, X, Plus, Pencil, Trash2, GripVertical, HelpCircle, ExternalLink } from "lucide-react";
 import { PLAN_LIMITS } from "@/lib/plan-limits";
 import type { PlanTier, Service, AutomationTriggerType, EmailAutomationTrigger, TonePreference, TicketCategory } from "@/lib/types";
 
@@ -64,6 +64,14 @@ export default function SettingsPage() {
   const [supportSubject, setSupportSubject] = useState("");
   const [supportDescription, setSupportDescription] = useState("");
   const [submittingTicket, setSubmittingTicket] = useState(false);
+
+  // Review links state
+  const [reviewLinks, setReviewLinks] = useState<Record<string, string>>({
+    google: "", yelp: "", bbb: "", facebook: "", trustpilot: "", other: "",
+  });
+  const [otherLabel, setOtherLabel] = useState("");
+  const [savingReviewLinks, setSavingReviewLinks] = useState(false);
+  const [reviewLinksLoaded, setReviewLinksLoaded] = useState(false);
 
   useEffect(() => {
     if (company?.settings) {
@@ -331,6 +339,79 @@ export default function SettingsPage() {
     setSubmittingTicket(false);
   }
 
+  // ── Review links ──────────────────────────
+  const fetchReviewLinks = useCallback(async () => {
+    if (!profile?.company_id) return;
+    try {
+      const res = await fetch("/api/admin/review-links");
+      if (!res.ok) return;
+      const { data } = await res.json();
+      const map: Record<string, string> = {
+        google: "", yelp: "", bbb: "", facebook: "", trustpilot: "", other: "",
+      };
+      let label = "";
+      for (const link of data ?? []) {
+        map[link.platform] = link.url ?? "";
+        if (link.platform === "other" && link.label) label = link.label;
+      }
+      setReviewLinks(map);
+      setOtherLabel(label);
+    } catch { /* ignore */ }
+    setReviewLinksLoaded(true);
+  }, [profile?.company_id]);
+
+  useEffect(() => { fetchReviewLinks(); }, [fetchReviewLinks]);
+
+  async function saveReviewLinks() {
+    // Validate URLs
+    for (const [platform, url] of Object.entries(reviewLinks)) {
+      if (!url.trim()) continue;
+      try {
+        const u = new URL(url.trim());
+        if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error();
+      } catch {
+        toast.error(`Invalid URL for ${platform}: ${url}`);
+        return;
+      }
+    }
+
+    setSavingReviewLinks(true);
+    const links = Object.entries(reviewLinks)
+      .filter(([, url]) => url.trim())
+      .map(([platform, url], i) => ({
+        platform,
+        url: url.trim(),
+        label: platform === "other" ? otherLabel.trim() || undefined : undefined,
+        display_order: i,
+      }));
+
+    try {
+      const res = await fetch("/api/admin/review-links", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ links }),
+      });
+      if (!res.ok) {
+        const { error } = await res.json();
+        toast.error(error || "Failed to save review links");
+      } else {
+        toast.success("Review links saved!");
+      }
+    } catch {
+      toast.error("Failed to save review links");
+    }
+    setSavingReviewLinks(false);
+  }
+
+  const REVIEW_PLATFORMS = [
+    { key: "google", name: "Google", icon: "\u{1F50D}" },
+    { key: "yelp", name: "Yelp", icon: "\u{2B50}" },
+    { key: "bbb", name: "BBB", icon: "\u{1F3DB}\uFE0F" },
+    { key: "facebook", name: "Facebook", icon: "\u{1F44D}" },
+    { key: "trustpilot", name: "Trustpilot", icon: "\u{2705}" },
+    { key: "other", name: "Other", icon: "\u{1F517}" },
+  ];
+
   const TRIGGER_INFO: Record<AutomationTriggerType, { label: string; description: string }> = {
     inactivity_30: { label: "30-day inactivity", description: "Send a gentle nudge to customers who haven't been active in 30 days" },
     inactivity_60: { label: "60-day inactivity (urgent)", description: "Send an urgent reminder to customers inactive for 60 days" },
@@ -378,6 +459,7 @@ export default function SettingsPage() {
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="branding">Branding</TabsTrigger>
           <TabsTrigger value="automation">Automation</TabsTrigger>
+          <TabsTrigger value="reviews">Review Links</TabsTrigger>
           <TabsTrigger value="support">Support</TabsTrigger>
         </TabsList>
 
@@ -661,6 +743,59 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Review Links Tab */}
+        <TabsContent value="reviews">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ExternalLink className="h-5 w-5" />
+                Review Links
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Add your review platform URLs. Customers will see buttons to leave reviews on the platforms you configure.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!reviewLinksLoaded ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map(i => <div key={i} className="h-12 animate-pulse rounded bg-muted" />)}
+                </div>
+              ) : (
+                <>
+                  {REVIEW_PLATFORMS.map((p) => (
+                    <div key={p.key}>
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl w-8 text-center">{p.icon}</span>
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-sm font-medium">{p.name}</Label>
+                          {p.key === "other" && (
+                            <Input
+                              placeholder="Platform name (e.g. Angi, HomeAdvisor)"
+                              value={otherLabel}
+                              onChange={(e) => setOtherLabel(e.target.value)}
+                              className="mb-1"
+                            />
+                          )}
+                          <Input
+                            placeholder={`https://www.${p.key === "other" ? "example" : p.key}.com/your-business`}
+                            value={reviewLinks[p.key] ?? ""}
+                            onChange={(e) => setReviewLinks(prev => ({ ...prev, [p.key]: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+                      <Separator className="mt-4" />
+                    </div>
+                  ))}
+                  <Button onClick={saveReviewLinks} disabled={savingReviewLinks} className="bg-teal-600 hover:bg-teal-700 mt-2">
+                    <Save className="mr-2 h-4 w-4" />
+                    {savingReviewLinks ? "Saving..." : "Save Review Links"}
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Support Tab */}
