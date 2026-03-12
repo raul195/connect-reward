@@ -46,7 +46,7 @@ export default function ProfilePage() {
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ totalReferrals: 0, completedReferrals: 0, totalRedeemed: 0 });
+  const [stats, setStats] = useState({ totalRedeemed: 0 });
   const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences>({
     referral_status: true,
     points_earned: true,
@@ -90,8 +90,6 @@ export default function ProfilePage() {
 
       if (data.stats) {
         setStats({
-          totalReferrals: data.stats.totalReferrals ?? 0,
-          completedReferrals: data.stats.completedReferrals ?? 0,
           totalRedeemed: data.stats.totalRedeemed ?? 0,
         });
       }
@@ -282,9 +280,6 @@ export default function ProfilePage() {
   const tier = calculateTierFromPoints(profile.total_points);
   const progress = getTierProgress(profile.total_points);
   const next = getPointsToNextTier(profile.total_points);
-  const conversionRate = stats.totalReferrals > 0
-    ? Math.round((stats.completedReferrals / stats.totalReferrals) * 100)
-    : 0;
   const initials = profile.full_name
     .split(" ")
     .map((n) => n[0])
@@ -378,27 +373,6 @@ export default function ProfilePage() {
               )}
             </div>
             <Progress value={progress} className="h-2.5 [&>div]:bg-teal-500" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Referral Stats */}
-      <Card>
-        <CardHeader><CardTitle className="text-lg">Referral Stats</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="text-center">
-              <p className="text-2xl font-bold">{stats.totalReferrals}</p>
-              <p className="text-sm text-muted-foreground">Total Submitted</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold">{stats.completedReferrals}</p>
-              <p className="text-sm text-muted-foreground">Completed</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold">{conversionRate}%</p>
-              <p className="text-sm text-muted-foreground">Conversion Rate</p>
-            </div>
           </div>
         </CardContent>
       </Card>

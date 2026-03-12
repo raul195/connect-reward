@@ -4,20 +4,7 @@ import { getAuthContext } from "@/lib/api-helpers";
 export async function GET() {
   const result = await getAuthContext();
   if (result.error) return result.error;
-  const { user, profile, admin } = result.ctx;
-
-  // Total referrals
-  const { count: totalReferrals } = await admin
-    .from("referrals")
-    .select("*", { count: "exact", head: true })
-    .eq("submitted_by", user.id);
-
-  // Completed referrals
-  const { count: completedReferrals } = await admin
-    .from("referrals")
-    .select("*", { count: "exact", head: true })
-    .eq("submitted_by", user.id)
-    .eq("status", "installation_complete");
+  const { profile, admin } = result.ctx;
 
   // Total redeemed: sum of negative point transactions (redemptions)
   const { data: redemptionTx } = await admin
@@ -33,8 +20,6 @@ export async function GET() {
   return NextResponse.json({
     profile,
     stats: {
-      totalReferrals: totalReferrals ?? 0,
-      completedReferrals: completedReferrals ?? 0,
       totalRedeemed,
     },
   });
