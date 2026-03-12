@@ -1070,6 +1070,7 @@ export default function EmailsPage() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                              aria-label="Preview draft"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openPreview(draft);
@@ -1085,6 +1086,7 @@ export default function EmailsPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                aria-label="Approve draft"
                                 onClick={() => approveDraft(draft.id)}
                                 disabled={actionLoading === draft.id}
                               >
@@ -1094,6 +1096,7 @@ export default function EmailsPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                aria-label="Cancel draft"
                                 onClick={() => cancelDraft(draft.id)}
                                 disabled={actionLoading === draft.id}
                               >

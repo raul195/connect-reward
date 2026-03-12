@@ -1,8 +1,16 @@
 import { MetadataRoute } from 'next'
+import { INDUSTRIES } from '@/lib/industries'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://connectreward.io'
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const industryPages: MetadataRoute.Sitemap = INDUSTRIES.map((i) => ({
+    url: `${BASE_URL}/industries/${i.slug}`,
+    lastModified: new Date(),
+    changeFrequency: 'monthly' as const,
+    priority: 0.8,
+  }))
+
   return [
     {
       url: BASE_URL,
@@ -16,6 +24,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'weekly',
       priority: 0.9,
     },
+    ...industryPages,
     {
       url: `${BASE_URL}/login`,
       lastModified: new Date(),

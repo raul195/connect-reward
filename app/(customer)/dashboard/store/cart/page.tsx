@@ -275,6 +275,7 @@ export default function CartPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label={`Remove ${li.name} from cart`}
                       className="text-muted-foreground hover:text-destructive"
                       disabled={removing === li.line_item_id}
                       onClick={() => handleRemove(li.line_item_id)}

@@ -127,7 +127,7 @@ export default function ReviewsPage() {
           {TEMPLATES.map((t, i) => (
             <div key={i} className="flex gap-3 rounded-lg border p-3">
               <p className="flex-1 text-sm text-muted-foreground">&ldquo;{t}&rdquo;</p>
-              <Button variant="ghost" size="icon" className="shrink-0" onClick={() => copyTemplate(t)}>
+              <Button variant="ghost" size="icon" className="shrink-0" aria-label="Copy template" onClick={() => copyTemplate(t)}>
                 <Copy className="h-4 w-4" />
               </Button>
             </div>

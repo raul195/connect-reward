@@ -561,10 +561,10 @@ export default function SettingsPage() {
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-bold text-teal-600">{svc.points_value.toLocaleString()} pts</span>
                         <Switch checked={svc.is_active} onCheckedChange={() => toggleServiceActive(svc)} />
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditService(svc)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Edit ${svc.name}`} onClick={() => openEditService(svc)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600" onClick={() => deleteService(svc.id)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600" aria-label={`Delete ${svc.name}`} onClick={() => deleteService(svc.id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -691,7 +691,7 @@ export default function SettingsPage() {
                         className="h-24 w-24 rounded-lg border object-contain bg-white p-2"
                       />
                       {logoPreview && (
-                        <button onClick={removeLogo} className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600">
+                        <button onClick={removeLogo} aria-label="Remove logo" className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600">
                           <X className="h-3 w-3" />
                         </button>
                       )}

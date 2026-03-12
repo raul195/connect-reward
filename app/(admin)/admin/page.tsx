@@ -216,7 +216,7 @@ export default function AdminDashboard() {
             <Button size="sm" className="bg-teal-600 hover:bg-teal-700" onClick={() => setFeedbackDialogOpen(true)}>
               Give Feedback
             </Button>
-            <button onClick={dismissFeedback} className="text-teal-600 hover:text-teal-800">
+            <button onClick={dismissFeedback} aria-label="Dismiss feedback prompt" className="text-teal-600 hover:text-teal-800">
               <X className="h-4 w-4" />
             </button>
           </div>

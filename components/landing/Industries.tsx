@@ -1,14 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { FadeIn } from "./FadeIn";
 
 const industries = [
-  "Solar",
-  "Roofing",
-  "HVAC",
-  "Windows",
-  "Turf",
-  "Pest Control",
+  { name: "Solar", slug: "solar" },
+  { name: "Roofing", slug: "roofing" },
+  { name: "HVAC", slug: "hvac" },
+  { name: "Windows", slug: "windows" },
+  { name: "Turf", slug: "turf" },
+  { name: "Pest Control", slug: "pest-control" },
 ];
 
 export function Industries() {
@@ -26,13 +27,14 @@ export function Industries() {
 
         <FadeIn delay={0.15}>
           <div className="mt-10 flex flex-wrap justify-center gap-3">
-            {industries.map((name) => (
-              <span
-                key={name}
+            {industries.map((ind) => (
+              <Link
+                key={ind.slug}
+                href={`/industries/${ind.slug}`}
                 className="rounded-full bg-[#F1F5F9] px-6 py-3 font-medium text-[#475569] transition-colors hover:bg-[#E2E8F0]"
               >
-                {name}
-              </span>
+                {ind.name}
+              </Link>
             ))}
           </div>
         </FadeIn>
