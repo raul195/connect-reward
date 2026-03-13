@@ -24,6 +24,7 @@ export async function POST(req: Request) {
         name: string;
         industry: string;
         job_value: number;
+        margin_percentage: number;
         referral_percentage: number;
         points_value: number;
       }[];
@@ -63,6 +64,7 @@ export async function POST(req: Request) {
         name: s.name,
         industry: s.industry,
         job_value: s.job_value,
+        margin_percentage: s.margin_percentage,
         referral_percentage: s.referral_percentage,
         points_value: s.points_value,
         is_active: true,

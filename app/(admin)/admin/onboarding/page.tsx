@@ -26,8 +26,18 @@ interface ServiceEntry {
   name: string;
   industry: string;
   job_value: number;
+  margin: number;
   referral_percentage: number;
 }
+
+const MARGIN_RANGES: Record<string, { low: number; high: number; label: string }> = {
+  solar: { low: 20, high: 35, label: "Solar: typically 20–35%" },
+  roofing: { low: 25, high: 40, label: "Roofing: typically 25–40%" },
+  hvac: { low: 30, high: 50, label: "HVAC: typically 30–50%" },
+  pest_control: { low: 50, high: 70, label: "Pest Control: typically 50–70%" },
+  windows: { low: 30, high: 45, label: "Windows: typically 30–45%" },
+  other: { low: 20, high: 50, label: "Other: typically 20–50%" },
+};
 
 interface ReviewPlatform {
   id: string;
@@ -198,12 +208,16 @@ export default function OnboardingPage() {
         if (!existingIndustries.has(ind)) {
           const suggestions = SERVICE_SUGGESTIONS[ind] || [];
           for (const s of suggestions) {
+            const defaultMargin = MARGIN_RANGES[ind]
+              ? Math.round((MARGIN_RANGES[ind].low + MARGIN_RANGES[ind].high) / 2)
+              : 30;
             newServices.push({
               id: uid(),
               name: s.name,
               industry: ind,
               job_value: s.value,
-              referral_percentage: 7,
+              margin: defaultMargin,
+              referral_percentage: 10,
             });
           }
         }
@@ -231,9 +245,12 @@ export default function OnboardingPage() {
   // ── Step 2 helpers ──
 
   function addService(industry: string) {
+    const defaultMargin = MARGIN_RANGES[industry]
+      ? Math.round((MARGIN_RANGES[industry].low + MARGIN_RANGES[industry].high) / 2)
+      : 30;
     setServices((prev) => [
       ...prev,
-      { id: uid(), name: "", industry, job_value: 0, referral_percentage: 7 },
+      { id: uid(), name: "", industry, job_value: 0, margin: defaultMargin, referral_percentage: 10 },
     ]);
   }
 
@@ -249,16 +266,23 @@ export default function OnboardingPage() {
 
   function addSuggestion(industry: string, name: string, value: number) {
     if (services.some((s) => s.name === name && s.industry === industry)) return;
+    const defaultMargin = MARGIN_RANGES[industry]
+      ? Math.round((MARGIN_RANGES[industry].low + MARGIN_RANGES[industry].high) / 2)
+      : 30;
     setServices((prev) => [
       ...prev,
-      { id: uid(), name, industry, job_value: value, referral_percentage: 7 },
+      { id: uid(), name, industry, job_value: value, margin: defaultMargin, referral_percentage: 10 },
     ]);
   }
 
   // ── Step 3 helpers ──
 
+  function getProfit(svc: ServiceEntry) {
+    return svc.job_value * (svc.margin / 100);
+  }
+
   function getRewardDollars(svc: ServiceEntry) {
-    return Math.round(svc.job_value * (svc.referral_percentage / 100));
+    return Math.round(getProfit(svc) * (svc.referral_percentage / 100));
   }
 
   function getRewardPoints(svc: ServiceEntry) {
@@ -278,6 +302,7 @@ export default function OnboardingPage() {
           name: s.name,
           industry: s.industry === "other" ? otherIndustry.trim() : INDUSTRIES.find((i) => i.id === s.industry)?.label || s.industry,
           job_value: s.job_value,
+          margin_percentage: s.margin,
           referral_percentage: s.referral_percentage,
           points_value: getRewardPoints(s),
         })),
@@ -374,6 +399,7 @@ export default function OnboardingPage() {
           <StepRewards
             services={services}
             onUpdateService={updateService}
+            getProfit={getProfit}
             getRewardDollars={getRewardDollars}
             getRewardPoints={getRewardPoints}
             averageReward={getAverageReward()}
@@ -400,9 +426,15 @@ export default function OnboardingPage() {
             )}
             serviceCount={services.length}
             rewardRange={{
-              min: services.length > 0 ? Math.min(...services.map(getRewardPoints)) : 0,
-              max: services.length > 0 ? Math.max(...services.map(getRewardPoints)) : 0,
+              minPts: services.length > 0 ? Math.min(...services.map(getRewardPoints)) : 0,
+              maxPts: services.length > 0 ? Math.max(...services.map(getRewardPoints)) : 0,
+              minDollars: services.length > 0 ? Math.min(...services.map(getRewardDollars)) : 0,
+              maxDollars: services.length > 0 ? Math.max(...services.map(getRewardDollars)) : 0,
             }}
+            avgMarginPct={services.length > 0
+              ? Math.round(services.reduce((sum, s) => sum + s.referral_percentage, 0) / services.length)
+              : 0
+            }
             reviewRewards={reviewRewards}
             planName={planName}
           />
@@ -616,12 +648,14 @@ function StepServices({
 function StepRewards({
   services,
   onUpdateService,
+  getProfit,
   getRewardDollars,
   getRewardPoints,
   averageReward,
 }: {
   services: ServiceEntry[];
   onUpdateService: (id: string, field: keyof ServiceEntry, value: string | number) => void;
+  getProfit: (s: ServiceEntry) => number;
   getRewardDollars: (s: ServiceEntry) => number;
   getRewardPoints: (s: ServiceEntry) => number;
   averageReward: { points: number; dollars: number };
@@ -632,45 +666,112 @@ function StepRewards({
         How much will you reward referrals?
       </h1>
       <p className="mt-2 text-[#64748B]">
-        We&apos;ve calculated suggested rewards based on your service values. You can adjust these.
+        Set your profit margin and choose what percentage of profit to offer as a referral reward.
       </p>
 
       <div className="mt-8 space-y-6">
-        {services.map((svc) => (
-          <div key={svc.id} className="rounded-xl border border-gray-200 bg-white p-4">
-            <div className="flex items-center justify-between">
-              <p className="font-semibold text-[#1A202C]">{svc.name}</p>
-              <p className="text-sm text-[#64748B]">Job: ${svc.job_value.toLocaleString()}</p>
-            </div>
+        {services.map((svc) => {
+          const profit = getProfit(svc);
+          const rewardDollars = getRewardDollars(svc);
+          const rewardPoints = getRewardPoints(svc);
+          const marginRange = MARGIN_RANGES[svc.industry] || MARGIN_RANGES.other;
+          const isHighReward = svc.referral_percentage > 25;
 
-            <div className="mt-4 flex items-center gap-4">
-              <span className="w-10 text-right text-sm font-bold text-[#0D9488]">
-                {svc.referral_percentage}%
-              </span>
-              <Slider
-                value={[svc.referral_percentage]}
-                onValueChange={([v]) => onUpdateService(svc.id, "referral_percentage", v)}
-                min={1}
-                max={20}
-                step={0.5}
-                className="flex-1"
-              />
-            </div>
+          return (
+            <div key={svc.id} className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-[#1A202C]">{svc.name}</p>
+                <p className="text-sm text-[#64748B]">Job: ${svc.job_value.toLocaleString()}</p>
+              </div>
 
-            <div className="mt-3 flex gap-4 text-sm">
-              <span className="rounded bg-teal-50 px-2 py-1 font-medium text-[#0D9488]">
-                ${getRewardDollars(svc).toLocaleString()} reward
-              </span>
-              <span className="rounded bg-amber-50 px-2 py-1 font-medium text-amber-600">
-                {getRewardPoints(svc).toLocaleString()} points
-              </span>
+              {/* Margin input */}
+              <div className="mt-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-[#475569]">
+                    Profit margin
+                  </label>
+                  <div className="group relative">
+                    <HelpCircle className="h-3.5 w-3.5 text-[#94A3B8] cursor-help" />
+                    <div className="invisible group-hover:visible absolute left-0 top-6 z-10 w-72 rounded-lg border bg-white p-3 text-xs text-[#64748B] shadow-lg">
+                      Your margin is your profit after labor, materials, and overhead costs.
+                      For example, if a $10,000 job costs you $6,000 to deliver, your margin is 40%.
+                      <p className="mt-2 font-medium text-[#475569]">{marginRange.label}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-1.5 flex items-center gap-3">
+                  <div className="relative w-24">
+                    <Input
+                      type="number"
+                      value={svc.margin || ""}
+                      onChange={(e) => {
+                        const v = Math.min(100, Math.max(0, Number(e.target.value)));
+                        onUpdateService(svc.id, "margin", v);
+                      }}
+                      className="pr-7"
+                      min={1}
+                      max={100}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+                  </div>
+                  <span className="text-sm text-[#64748B]">
+                    = <span className="font-medium text-[#1A202C]">${Math.round(profit).toLocaleString()}</span> profit per job
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-[#94A3B8]">
+                  {marginRange.label}
+                </p>
+              </div>
+
+              {/* Referral reward slider (% of profit) */}
+              <div className="mt-5">
+                <label className="text-sm font-medium text-[#475569]">
+                  Referral reward (% of profit)
+                </label>
+                <div className="mt-2 flex items-center gap-4">
+                  <span className="w-12 text-right text-sm font-bold text-[#0D9488]">
+                    {svc.referral_percentage}%
+                  </span>
+                  <Slider
+                    value={[svc.referral_percentage]}
+                    onValueChange={([v]) => onUpdateService(svc.id, "referral_percentage", v)}
+                    min={1}
+                    max={30}
+                    step={1}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+
+              {/* Live calculated values */}
+              <div className="mt-3 flex flex-wrap gap-3 text-sm">
+                <span className="rounded bg-teal-50 px-2 py-1 font-medium text-[#0D9488]">
+                  ${rewardDollars.toLocaleString()} reward
+                </span>
+                <span className="rounded bg-amber-50 px-2 py-1 font-medium text-amber-600">
+                  {rewardPoints.toLocaleString()} points
+                </span>
+                <span className="rounded bg-gray-100 px-2 py-1 font-medium text-[#64748B]">
+                  {svc.referral_percentage}% of profit
+                </span>
+              </div>
+
+              {/* Profitability guardrail */}
+              {isHighReward && (
+                <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                  <span className="text-amber-500">⚠️</span>
+                  <p className="text-xs text-amber-700">
+                    This reward is quite high relative to your margin. Make sure this works for your business.
+                  </p>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <p className="mt-6 text-sm text-[#64748B]">
-        Most businesses in your industry offer 5–10% of job value as a referral reward. Higher rewards attract more referrals.
+        Most businesses offer 8–15% of their profit margin as a referral reward. This keeps you profitable on every referred job.
       </p>
 
       <div className="mt-4 rounded-lg border border-teal-200 bg-teal-50 p-4 text-center">
@@ -901,15 +1002,21 @@ function StepSummary({
   industries,
   serviceCount,
   rewardRange,
+  avgMarginPct,
   reviewRewards,
   planName,
 }: {
   industries: string[];
   serviceCount: number;
-  rewardRange: { min: number; max: number };
+  rewardRange: { minPts: number; maxPts: number; minDollars: number; maxDollars: number };
+  avgMarginPct: number;
   reviewRewards: Record<string, number>;
   planName: string;
 }) {
+  const rewardRangeText = rewardRange.minPts === rewardRange.maxPts
+    ? `${rewardRange.minPts.toLocaleString()} points ($${rewardRange.minDollars.toLocaleString()} | ${avgMarginPct}% of margin)`
+    : `${rewardRange.minPts.toLocaleString()} – ${rewardRange.maxPts.toLocaleString()} points ($${rewardRange.minDollars.toLocaleString()} – $${rewardRange.maxDollars.toLocaleString()} | ${avgMarginPct}% of margin)`;
+
   return (
     <div>
       <div className="text-center">
@@ -927,14 +1034,10 @@ function StepSummary({
       <div className="mt-8 space-y-4">
         <SummaryRow label="Industries" value={industries.join(", ")} />
         <SummaryRow label="Services configured" value={String(serviceCount)} />
-        <SummaryRow
-          label="Referral reward range"
-          value={
-            rewardRange.min === rewardRange.max
-              ? `${rewardRange.min.toLocaleString()} points`
-              : `${rewardRange.min.toLocaleString()} – ${rewardRange.max.toLocaleString()} points`
-          }
-        />
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-sm font-medium text-[#64748B]">Referral reward range</p>
+          <p className="mt-1 text-sm font-bold text-[#1A202C]">{rewardRangeText}</p>
+        </div>
         <div className="rounded-lg border border-gray-200 bg-white p-4">
           <p className="text-sm font-medium text-[#64748B]">Review rewards</p>
           <div className="mt-2 flex flex-wrap gap-3">
