@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,9 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Check,
   X,
   CheckCheck,
@@ -33,7 +37,17 @@ import {
   Clock,
   Zap,
   ArrowRight,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  SkipForward,
+  Send,
+  BanIcon,
 } from "lucide-react";
+import { relativeTime } from "@/lib/relative-time";
 import type { EmailDraft, AutomationTriggerType, TonePreference } from "@/lib/types";
 import { textToHtml, injectVariables } from "@/lib/email/injectVariables";
 import {
@@ -358,7 +372,67 @@ function getOriginalTemplateSubject(draft: DraftWithProfile): string {
   return injectVariables(template.subject, varData);
 }
 
+// ── Activity tab constants ──
+
+const ACTIVITY_PAGE_SIZE = 50;
+
+const ACTIVITY_TEMPLATE_OPTIONS = [
+  { value: "all", label: "All Types" },
+  { value: "welcome", label: "Welcome" },
+  { value: "referral_status", label: "Referral Status" },
+  { value: "points_earned", label: "Points Earned" },
+  { value: "reward_redeemed", label: "Reward Redeemed" },
+  { value: "inactivity", label: "Inactivity" },
+  { value: "points_close_to_reward", label: "Close to Reward" },
+  { value: "referral_nudge", label: "Referral Nudge" },
+  { value: "milestone", label: "Milestone" },
+  { value: "monthly_reminder", label: "Monthly Reminder" },
+  { value: "promotion_announcement", label: "Promotion" },
+  { value: "promotion_reminder", label: "Promo Reminder" },
+  { value: "promotion_last_chance", label: "Promo Last Chance" },
+  { value: "ticket_resolved", label: "Ticket Resolved" },
+  { value: "feedback_request", label: "Feedback Request" },
+];
+
+const ACTIVITY_STATUS_OPTIONS = [
+  { value: "all", label: "All Statuses" },
+  { value: "sent", label: "Delivered" },
+  { value: "failed", label: "Failed" },
+  { value: "skipped", label: "Skipped" },
+];
+
+const ACTIVITY_RANGE_OPTIONS = [
+  { value: "7", label: "Last 7 days" },
+  { value: "30", label: "Last 30 days" },
+  { value: "all", label: "All time" },
+];
+
+interface ActivityLogRow {
+  id: string;
+  template_name: string;
+  recipient_email: string;
+  status: "sent" | "failed" | "skipped";
+  metadata: Record<string, unknown>;
+  created_at: string;
+  customer_id: string | null;
+  profiles: { full_name: string } | null;
+}
+
+interface ActivitySummary {
+  total: number;
+  delivered: number;
+  failed: number;
+  skipped: number;
+  dncCount: number;
+  recentBounces: number;
+}
+
+function formatTemplateName(name: string): string {
+  return name.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function EmailsPage() {
+  const router = useRouter();
   const { profile } = useProfile();
   const [pendingDrafts, setPendingDrafts] = useState<DraftWithProfile[]>([]);
   const [sentDrafts, setSentDrafts] = useState<DraftWithProfile[]>([]);
@@ -400,6 +474,20 @@ export default function EmailsPage() {
   const [dripSaving, setDripSaving] = useState<string | null>(null);
   const [dripSaveConfirm, setDripSaveConfirm] = useState<string | null>(null);
   const [dripError, setDripError] = useState<string | null>(null);
+
+  // Activity tab state
+  const [activityLogs, setActivityLogs] = useState<ActivityLogRow[]>([]);
+  const [activityTotal, setActivityTotal] = useState(0);
+  const [activitySummary, setActivitySummary] = useState<ActivitySummary>({
+    total: 0, delivered: 0, failed: 0, skipped: 0, dncCount: 0, recentBounces: 0,
+  });
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activitySearch, setActivitySearch] = useState("");
+  const [activityStatus, setActivityStatus] = useState("all");
+  const [activityTemplate, setActivityTemplate] = useState("all");
+  const [activityRange, setActivityRange] = useState("30");
+  const [activityPage, setActivityPage] = useState(0);
+  const [activityLoaded, setActivityLoaded] = useState(false);
 
   const fetchDrafts = useCallback(async () => {
     if (!profile?.company_id) return;
@@ -470,6 +558,37 @@ export default function EmailsPage() {
     fetchCustomTemplates();
     fetchTriggerStates();
   }, [fetchDrafts, fetchCustomTemplates, fetchTriggerStates]);
+
+  const fetchActivity = useCallback(async () => {
+    if (!profile?.company_id) return;
+    setActivityLoading(true);
+    try {
+      const params = new URLSearchParams({
+        range: activityRange,
+        page: String(activityPage),
+      });
+      if (activitySearch) params.set("search", activitySearch);
+      if (activityStatus !== "all") params.set("status", activityStatus);
+      if (activityTemplate !== "all") params.set("template", activityTemplate);
+
+      const res = await fetch(`/api/admin/emails?${params}`);
+      if (!res.ok) throw new Error("Failed to load");
+      const data = await res.json();
+      setActivityLogs(data.logs ?? []);
+      setActivityTotal(data.total ?? 0);
+      setActivitySummary(data.summary ?? {
+        total: 0, delivered: 0, failed: 0, skipped: 0, dncCount: 0, recentBounces: 0,
+      });
+    } catch {
+      toast.error("Failed to load email activity");
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [profile?.company_id, activitySearch, activityStatus, activityTemplate, activityRange, activityPage]);
+
+  useEffect(() => {
+    if (activityLoaded) fetchActivity();
+  }, [activityLoaded, fetchActivity]);
 
   // Get the effective template (custom override or default)
   function getEffectiveTemplate(
@@ -964,6 +1083,7 @@ export default function EmailsPage() {
           </TabsTrigger>
           <TabsTrigger value="sent">Sent History</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="activity" onClick={() => { if (!activityLoaded) setActivityLoaded(true); }}>Activity</TabsTrigger>
         </TabsList>
 
         {/* ── Pending Drafts Tab ── */}
@@ -1676,6 +1796,217 @@ export default function EmailsPage() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ── Activity Tab ── */}
+        <TabsContent value="activity">
+          <div className="space-y-6">
+            {/* Bounce alert */}
+            {activitySummary.recentBounces > 0 && (
+              <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+                <p className="text-sm text-amber-800">
+                  <span className="font-medium">{activitySummary.recentBounces} email{activitySummary.recentBounces !== 1 ? "s" : ""} bounced</span> in the last 7 days. Bounced addresses are automatically suppressed.
+                </p>
+              </div>
+            )}
+
+            {/* Summary cards */}
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+              <Card>
+                <CardContent className="pt-4 pb-4 text-center">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
+                    <Send className="h-4 w-4" />
+                    <span className="text-xs font-medium uppercase tracking-wide">Total Sent</span>
+                  </div>
+                  <p className="text-2xl font-bold tabular-nums">
+                    {activityLoading ? "—" : activitySummary.total.toLocaleString()}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4 pb-4 text-center">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <span className="text-xs font-medium uppercase tracking-wide">Delivery Rate</span>
+                  </div>
+                  <p className="text-2xl font-bold tabular-nums text-green-600">
+                    {activityLoading ? "—" : `${activitySummary.total > 0 ? ((activitySummary.delivered / activitySummary.total) * 100).toFixed(1) : "0.0"}%`}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4 pb-4 text-center">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
+                    <XCircle className="h-4 w-4 text-red-500" />
+                    <span className="text-xs font-medium uppercase tracking-wide">Bounce Rate</span>
+                  </div>
+                  <p className="text-2xl font-bold tabular-nums text-red-600">
+                    {activityLoading ? "—" : `${activitySummary.total > 0 ? ((activitySummary.failed / activitySummary.total) * 100).toFixed(1) : "0.0"}%`}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4 pb-4 text-center">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
+                    <SkipForward className="h-4 w-4 text-amber-500" />
+                    <span className="text-xs font-medium uppercase tracking-wide">Skipped</span>
+                  </div>
+                  <p className="text-2xl font-bold tabular-nums text-amber-600">
+                    {activityLoading ? "—" : activitySummary.skipped.toLocaleString()}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="col-span-2 sm:col-span-1">
+                <CardContent className="pt-4 pb-4 text-center">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground mb-1">
+                    <BanIcon className="h-4 w-4 text-gray-500" />
+                    <span className="text-xs font-medium uppercase tracking-wide">Active DNC</span>
+                  </div>
+                  <p className="text-2xl font-bold tabular-nums">
+                    {activityLoading ? "—" : activitySummary.dncCount.toLocaleString()}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Filter bar */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by email..."
+                  className="pl-9"
+                  value={activitySearch}
+                  onChange={(e) => { setActivitySearch(e.target.value); setActivityPage(0); }}
+                />
+              </div>
+              <Select value={activityRange} onValueChange={(v) => { setActivityRange(v); setActivityPage(0); }}>
+                <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ACTIVITY_RANGE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={activityTemplate} onValueChange={(v) => { setActivityTemplate(v); setActivityPage(0); }}>
+                <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ACTIVITY_TEMPLATE_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={activityStatus} onValueChange={(v) => { setActivityStatus(v); setActivityPage(0); }}>
+                <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ACTIVITY_STATUS_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Email log table */}
+            <Card>
+              <CardContent className="p-0 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="p-3">Customer</th>
+                      <th className="p-3">Email Type</th>
+                      <th className="p-3 hidden md:table-cell">Recipient</th>
+                      <th className="p-3">Status</th>
+                      <th className="p-3 hidden sm:table-cell">Date Sent</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activityLoading ? (
+                      Array.from({ length: 8 }).map((_, i) => (
+                        <tr key={i}>
+                          <td colSpan={5} className="p-3">
+                            <div className="h-8 animate-pulse rounded bg-muted" />
+                          </td>
+                        </tr>
+                      ))
+                    ) : activityLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                          <Mail className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                          No emails found.
+                        </td>
+                      </tr>
+                    ) : (
+                      activityLogs.map((log) => {
+                        const customerName = log.profiles?.full_name ?? "—";
+                        return (
+                          <tr key={log.id} className="border-b hover:bg-muted/50">
+                            <td className="p-3">
+                              {log.customer_id ? (
+                                <button
+                                  onClick={() => router.push(`/admin/customers/${log.customer_id}`)}
+                                  className="font-medium text-teal-600 hover:underline text-left"
+                                >
+                                  {customerName}
+                                </button>
+                              ) : (
+                                <span className="text-muted-foreground">{customerName}</span>
+                              )}
+                            </td>
+                            <td className="p-3">
+                              <Badge variant="secondary" className="font-normal">
+                                {formatTemplateName(log.template_name)}
+                              </Badge>
+                            </td>
+                            <td className="p-3 hidden md:table-cell text-muted-foreground">
+                              {log.recipient_email}
+                            </td>
+                            <td className="p-3">
+                              {log.status === "sent" && (
+                                <Badge className="bg-green-100 text-green-800 hover:bg-green-100 gap-1">
+                                  <CheckCircle2 className="h-3 w-3" /> Delivered
+                                </Badge>
+                              )}
+                              {log.status === "failed" && (
+                                <Badge variant="destructive" className="gap-1">
+                                  <XCircle className="h-3 w-3" /> Failed
+                                </Badge>
+                              )}
+                              {log.status === "skipped" && (
+                                <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 gap-1">
+                                  <SkipForward className="h-3 w-3" /> Skipped
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="p-3 hidden sm:table-cell text-muted-foreground">
+                              {relativeTime(log.created_at)}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+
+            {/* Pagination */}
+            {Math.ceil(activityTotal / ACTIVITY_PAGE_SIZE) > 1 && (
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Page {activityPage + 1} of {Math.ceil(activityTotal / ACTIVITY_PAGE_SIZE)} ({activityTotal.toLocaleString()} emails)
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" aria-label="Previous page" disabled={activityPage === 0} onClick={() => setActivityPage((p) => p - 1)}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" aria-label="Next page" disabled={activityPage >= Math.ceil(activityTotal / ACTIVITY_PAGE_SIZE) - 1} onClick={() => setActivityPage((p) => p + 1)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </TabsContent>

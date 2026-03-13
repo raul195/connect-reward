@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useProfile } from "@/hooks/useProfile";
 import { useCompany } from "@/hooks/useCompany";
 import { isDemoAccount } from "@/lib/demo";
@@ -94,6 +95,7 @@ function EmailStatusIcon({ status }: { status?: string }) {
 }
 
 export default function CustomersPage() {
+  const router = useRouter();
   const { profile: adminProfile } = useProfile();
   const { company } = useCompany(adminProfile?.company_id);
   const [customers, setCustomers] = useState<Profile[]>([]);
@@ -108,7 +110,6 @@ export default function CustomersPage() {
   // Modals
   const [addOpen, setAddOpen] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState<Profile | null>(null);
-  const [detailOpen, setDetailOpen] = useState<Profile | null>(null);
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
@@ -532,7 +533,7 @@ export default function CustomersPage() {
                 customers.map((c, i) => {
                   const rank = page * PAGE_SIZE + i;
                   return (
-                    <tr key={c.id} className="border-b hover:bg-muted/50 cursor-pointer" onClick={() => setDetailOpen(c)}>
+                    <tr key={c.id} className="border-b hover:bg-muted/50 cursor-pointer" onClick={() => router.push(`/admin/customers/${c.id}`)}>
                       <td className="p-3 font-bold">
                         {sortCol === "total_points" && !sortAsc && rank < 3
                           ? <span className="text-lg">{MEDALS[rank]}</span>
@@ -552,7 +553,7 @@ export default function CustomersPage() {
                             <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Customer actions"><MoreHorizontal className="h-4 w-4" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setDetailOpen(c)}>View Details</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push(`/admin/customers/${c.id}`)}>View Profile</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setAdjustOpen(c)}>Adjust Points</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -665,55 +666,6 @@ export default function CustomersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Customer Detail Modal */}
-      <Dialog open={!!detailOpen} onOpenChange={() => setDetailOpen(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{detailOpen?.full_name}</DialogTitle>
-            <DialogDescription>{detailOpen?.email}</DialogDescription>
-          </DialogHeader>
-          {detailOpen && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-2xl font-bold">{detailOpen.total_points.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">Points</p>
-                </div>
-                <div>
-                  <TierBadge tier={detailOpen.tier as LoyaltyTier} />
-                  <p className="text-xs text-muted-foreground mt-1">Tier</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{relativeTime(detailOpen.created_at)}</p>
-                  <p className="text-xs text-muted-foreground">Joined</p>
-                </div>
-              </div>
-              {detailOpen.phone && <p className="text-sm text-muted-foreground">Phone: {detailOpen.phone}</p>}
-              {(detailOpen.address || detailOpen.city) && (
-                <p className="text-sm text-muted-foreground">
-                  Address: {[detailOpen.address, detailOpen.city, detailOpen.state, detailOpen.zip].filter(Boolean).join(", ")}
-                </p>
-              )}
-              {detailOpen.email_status && detailOpen.email_status !== "unknown" && detailOpen.email_status !== "valid" && (
-                <div className="flex items-center gap-2 text-sm">
-                  {detailOpen.email_status === "bounced" && (
-                    <Badge variant="destructive">Email Bounced</Badge>
-                  )}
-                  {detailOpen.email_status === "complained" && (
-                    <Badge className="bg-orange-100 text-orange-800 hover:bg-orange-100">Spam Complaint</Badge>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setDetailOpen(null); if (detailOpen) setAdjustOpen(detailOpen); }}>
-              Adjust Points
-            </Button>
-            <Button variant="outline" onClick={() => setDetailOpen(null)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Import Wizard Modal */}
       <Dialog open={importOpen} onOpenChange={(open) => {
