@@ -70,7 +70,7 @@ async function processAutomations() {
 
   // Fetch all active companies
   const { data: companies, error: compErr } = await admin
-    .from("businesses")
+    .from("companies")
     .select("id, name, logo_url, settings")
     .eq("is_active", true);
 
@@ -617,7 +617,7 @@ async function processAutomations() {
 
         // Get company info for branding
         const { data: companyData } = await admin
-          .from("businesses")
+          .from("companies")
           .select("name, logo_url, settings")
           .eq("id", adminProfile.company_id)
           .single();

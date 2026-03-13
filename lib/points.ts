@@ -87,7 +87,7 @@ export async function awardReferralCompletion(
 
   // 2. Get company settings
   const { data: company } = await supabase
-    .from("businesses")
+    .from("companies")
     .select("settings")
     .eq("id", referral.company_id)
     .single();
@@ -187,7 +187,7 @@ export async function awardReferralCompletion(
     .single();
 
   const { data: companyBranding } = await supabase
-    .from("businesses")
+    .from("companies")
     .select("name, logo_url, settings")
     .eq("id", referral.company_id)
     .single();
@@ -275,7 +275,7 @@ export async function manualPointAdjustment(
       .single();
 
     const { data: companyBranding } = await supabase
-      .from("businesses")
+      .from("companies")
       .select("name, logo_url, settings")
       .eq("id", companyId)
       .single();
@@ -324,7 +324,7 @@ export async function awardReviewPoints(
   if (!review) return;
 
   const { data: company } = await supabase
-    .from("businesses")
+    .from("companies")
     .select("settings")
     .eq("id", review.company_id)
     .single();
@@ -387,7 +387,7 @@ export async function awardReviewPoints(
       .single();
 
     const { data: companyBranding } = await supabase
-      .from("businesses")
+      .from("companies")
       .select("name, logo_url, settings")
       .eq("id", review.company_id)
       .single();

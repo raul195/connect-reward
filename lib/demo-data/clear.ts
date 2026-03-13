@@ -19,7 +19,7 @@ export async function clearDemoData() {
 
   // 2. Delete the demo company (cascades to services, rewards, etc.)
   await admin
-    .from("businesses")
+    .from("companies")
     .delete()
     .eq("slug", DEMO_COMPANY_SLUG);
 

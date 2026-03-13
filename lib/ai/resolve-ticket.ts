@@ -33,7 +33,7 @@ export async function resolveTicket(ticket: SupportTicket): Promise<void> {
 
   // Fetch company info
   const { data: company } = await admin
-    .from("businesses")
+    .from("companies")
     .select("*")
     .eq("id", ticket.company_id)
     .single();

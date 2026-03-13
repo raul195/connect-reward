@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
   // 4. Check plan limits
   const { data: company } = await supabase
-    .from("businesses")
+    .from("companies")
     .select("plan_tier")
     .eq("id", companyId)
     .single();
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
 
   // Send welcome email (fire-and-forget)
   const { data: companyData } = await admin
-    .from("businesses")
+    .from("companies")
     .select("name, logo_url, settings")
     .eq("id", companyId)
     .single();

@@ -43,7 +43,7 @@ export async function checkAndAwardAchievements(
       .eq("company_id", businessId)
       .limit(1),
     supabase
-      .from("businesses")
+      .from("companies")
       .select("created_at")
       .eq("id", businessId)
       .single(),

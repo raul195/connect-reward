@@ -122,7 +122,7 @@ export async function POST(
 
   // Get company data for welcome emails
   const { data: companyData } = await admin
-    .from("businesses")
+    .from("companies")
     .select("name, logo_url, settings")
     .eq("id", cid)
     .single();
