@@ -24,31 +24,44 @@ const PLANS: Record<PlanTier, PlanInfo> = {
     name: "Free", price: "$0", customers: "50", teamMembers: "1",
     features: [
       { label: "Referral tracking", included: true },
-      { label: "Basic dashboard", included: true },
+      { label: "Customer points & leaderboard", included: true },
       { label: "Up to 3 rewards", included: true },
       { label: "Up to 3 services", included: true },
-      { label: "Basic analytics", included: true },
-      { label: "Reports & charts", included: false },
+      { label: "Manual rewards catalog", included: true },
       { label: "Email automation", included: false },
       { label: "Custom branding", included: false },
+      { label: "Priority support", included: false },
     ],
   },
   beta: {
-    name: "Beta", price: "$99/mo", customers: "200", teamMembers: "3",
+    name: "Starter", price: "$99/mo", customers: "200", teamMembers: "3",
     features: [
+      { label: "Email automation & campaigns", included: true },
       { label: "Referral tracking", included: true },
       { label: "Full dashboard", included: true },
       { label: "Up to 10 rewards", included: true },
       { label: "Up to 10 services", included: true },
-      { label: "Full analytics", included: true },
-      { label: "Reports & charts", included: true },
-      { label: "Email automation", included: true },
+      { label: "Full analytics & reports", included: true },
       { label: "Custom branding", included: true },
+      { label: "Priority support", included: true },
+    ],
+  },
+  starter: {
+    name: "Starter", price: "$99/mo", customers: "200", teamMembers: "3",
+    features: [
+      { label: "Email automation & campaigns", included: true },
+      { label: "Referral tracking", included: true },
+      { label: "Full dashboard", included: true },
+      { label: "Up to 10 rewards", included: true },
+      { label: "Up to 10 services", included: true },
+      { label: "Full analytics & reports", included: true },
+      { label: "Custom branding", included: true },
+      { label: "Priority support", included: true },
     ],
   },
 };
 
-const PLAN_ORDER: PlanTier[] = ["free", "beta"];
+const PLAN_ORDER: PlanTier[] = ["free", "starter"];
 
 export default function BillingPage() {
   const { profile } = useProfile();
@@ -69,9 +82,13 @@ export default function BillingPage() {
 
   useEffect(() => { fetchUsage(); }, [fetchUsage]);
 
-  const currentPlan = company?.plan_tier ?? "free";
+  const rawPlan = company?.plan_tier ?? "free";
+  // Normalize: "beta" displays as "starter" in the comparison table
+  const currentPlan = rawPlan === "beta" ? "beta" : rawPlan;
   const planInfo = PLANS[currentPlan as PlanTier] ?? PLANS.free;
-  const currentIdx = PLAN_ORDER.indexOf(currentPlan as PlanTier);
+  // For comparison table highlighting, map beta → starter
+  const displayPlan = rawPlan === "beta" ? "starter" : rawPlan;
+  const currentIdx = PLAN_ORDER.indexOf(displayPlan as PlanTier);
 
   const custLimit = parseInt(planInfo.customers) || 9999;
   const teamLimit = parseInt(planInfo.teamMembers) || 9999;
@@ -129,7 +146,7 @@ export default function BillingPage() {
               <tr className="border-b">
                 <th className="p-3 text-left font-medium text-muted-foreground">Feature</th>
                 {PLAN_ORDER.map(p => (
-                  <th key={p} className={`p-3 text-center ${p === currentPlan ? "bg-teal-50" : ""}`}>
+                  <th key={p} className={`p-3 text-center ${p === displayPlan ? "bg-teal-50" : ""}`}>
                     <div className="font-bold">{PLANS[p].name}</div>
                     <div className="text-muted-foreground font-normal">{PLANS[p].price}</div>
                   </th>
@@ -140,13 +157,13 @@ export default function BillingPage() {
               <tr className="border-b">
                 <td className="p-3 font-medium">Customers</td>
                 {PLAN_ORDER.map(p => (
-                  <td key={p} className={`p-3 text-center ${p === currentPlan ? "bg-teal-50" : ""}`}>{PLANS[p].customers}</td>
+                  <td key={p} className={`p-3 text-center ${p === displayPlan ? "bg-teal-50" : ""}`}>{PLANS[p].customers}</td>
                 ))}
               </tr>
               <tr className="border-b">
                 <td className="p-3 font-medium">Team Members</td>
                 {PLAN_ORDER.map(p => (
-                  <td key={p} className={`p-3 text-center ${p === currentPlan ? "bg-teal-50" : ""}`}>{PLANS[p].teamMembers}</td>
+                  <td key={p} className={`p-3 text-center ${p === displayPlan ? "bg-teal-50" : ""}`}>{PLANS[p].teamMembers}</td>
                 ))}
               </tr>
               {PLANS.free.features.map((_, fi) => (
@@ -155,7 +172,7 @@ export default function BillingPage() {
                   {PLAN_ORDER.map(p => {
                     const feat = PLANS[p].features[fi];
                     return (
-                      <td key={p} className={`p-3 text-center ${p === currentPlan ? "bg-teal-50" : ""}`}>
+                      <td key={p} className={`p-3 text-center ${p === displayPlan ? "bg-teal-50" : ""}`}>
                         {feat.included
                           ? <Check className="mx-auto h-4 w-4 text-teal-600" />
                           : <X className="mx-auto h-4 w-4 text-gray-300" />}
@@ -167,8 +184,8 @@ export default function BillingPage() {
               <tr>
                 <td className="p-3"></td>
                 {PLAN_ORDER.map((p, i) => (
-                  <td key={p} className={`p-3 text-center ${p === currentPlan ? "bg-teal-50" : ""}`}>
-                    {p === currentPlan ? (
+                  <td key={p} className={`p-3 text-center ${p === displayPlan ? "bg-teal-50" : ""}`}>
+                    {p === displayPlan ? (
                       <Badge variant="outline">Current Plan</Badge>
                     ) : i > currentIdx ? (
                       <Button size="sm" className="bg-teal-600 hover:bg-teal-700"

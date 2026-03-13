@@ -21,7 +21,7 @@ const jsonLd = [
     url: "https://connectreward.io",
     offers: [
       { "@type": "Offer", price: "0", priceCurrency: "USD", name: "Free" },
-      { "@type": "Offer", price: "99", priceCurrency: "USD", name: "Beta", billingIncrement: "P1M" },
+      { "@type": "Offer", price: "99", priceCurrency: "USD", name: "Starter", billingIncrement: "P1M" },
     ],
   },
   {

@@ -3,7 +3,10 @@
 import { Sidebar, type NavItem } from "@/components/shared/Sidebar";
 import { Header } from "@/components/shared/Header";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
+import { PoweredByFooter } from "@/components/shared/PoweredByFooter";
 import { useProfile } from "@/hooks/useProfile";
+import { useCompany } from "@/hooks/useCompany";
+import { isFreePlan } from "@/lib/plan-limits";
 import {
   LayoutDashboard,
   Send,
@@ -83,6 +86,7 @@ export default function CustomerLayout({
   children: React.ReactNode;
 }) {
   const { profile } = useProfile();
+  const { company } = useCompany(profile?.company_id);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -99,6 +103,7 @@ export default function CustomerLayout({
           <main className="flex-1 overflow-y-auto p-4 md:p-6">
             <ErrorBoundary>{children}</ErrorBoundary>
           </main>
+          {isFreePlan(company?.plan_tier) && <PoweredByFooter />}
         </div>
       </div>
     </div>

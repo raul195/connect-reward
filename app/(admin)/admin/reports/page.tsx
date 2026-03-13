@@ -60,7 +60,7 @@ export default function ReportsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Reports & Analytics</h1>
           <p className="text-muted-foreground">Track your program performance.</p>
         </div>
-        <UpgradeCTA message="Upgrade to Beta to unlock reports, charts, and analytics." />
+        <UpgradeCTA message="Full analytics and reports are available on the Starter plan. Upgrade to unlock." />
       </div>
     );
   }

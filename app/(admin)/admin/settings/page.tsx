@@ -548,7 +548,16 @@ export default function SettingsPage() {
               ) : (
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground mb-2">{services.length}/{serviceLimit} services used</p>
-                  {atServiceLimit && <UpgradeCTA message={`You've reached your ${serviceLimit}-service limit. Upgrade to add more.`} className="mb-2" />}
+                  {atServiceLimit && (
+                    <UpgradeCTA
+                      message={
+                        isFreePlan
+                          ? "You've reached the free plan limit of 3 services. Upgrade to Starter to add up to 10 services."
+                          : `You've reached your ${serviceLimit}-service limit. Upgrade to add more.`
+                      }
+                      className="mb-2"
+                    />
+                  )}
                   {services.map(svc => (
                     <div key={svc.id} className={`flex items-center justify-between rounded-lg border p-4 ${!svc.is_active ? "opacity-50" : ""}`}>
                       <div className="flex items-center gap-3">
@@ -675,7 +684,7 @@ export default function SettingsPage() {
         {/* Branding Tab */}
         <TabsContent value="branding">
           {isFreePlan ? (
-            <UpgradeCTA message="Upgrade to customize your branding." />
+            <UpgradeCTA message="Custom branding is available on the Starter plan. Upgrade to remove 'Powered by Connect Reward' and add your own logo." />
           ) : (
             <Card>
               <CardHeader><CardTitle>Brand Customization</CardTitle></CardHeader>
@@ -842,7 +851,7 @@ export default function SettingsPage() {
         {/* Automation Tab */}
         <TabsContent value="automation">
           {isFreePlan ? (
-            <UpgradeCTA message="Upgrade to Beta to unlock email automation." />
+            <UpgradeCTA message="Email automation is available on the Starter plan. Upgrade to unlock automated referral emails and campaigns." />
           ) : (
           <Card>
             <CardHeader>

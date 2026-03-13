@@ -119,7 +119,7 @@ export default function TeamPage() {
         </Button>
       </div>
 
-      {isFreePlan && <UpgradeCTA message="Upgrade to Beta to invite team members." />}
+      {isFreePlan && <UpgradeCTA message="Team members are available on the Starter plan. Upgrade to invite up to 3 team members." />}
 
       {/* Role Permissions */}
       <Card>

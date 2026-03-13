@@ -38,10 +38,32 @@ export const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
     apiAccess: true,
     prioritySupport: true,
   },
+  starter: {
+    maxRewards: 10,
+    maxCustomers: 200,
+    maxServices: 10,
+    maxTeamMembers: 3,
+    customBranding: true,
+    analytics: true,
+    reports: true,
+    emailAutomation: true,
+    apiAccess: true,
+    prioritySupport: true,
+  },
 };
+
+/** Normalize plan tier — "beta" legacy records behave as "starter" */
+export function normalizePlan(plan: string | undefined | null): PlanTier {
+  if (plan === "starter" || plan === "beta") return plan as PlanTier;
+  return "free";
+}
 
 export function getPlanLimits(plan: PlanTier): PlanLimits {
   return PLAN_LIMITS[plan];
+}
+
+export function isFreePlan(plan: string | undefined | null): boolean {
+  return normalizePlan(plan) === "free";
 }
 
 export function isAtLimit(

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
+import { PLAN_LIMITS } from "@/lib/plan-limits";
+import type { PlanTier } from "@/lib/types";
 
 const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
@@ -135,6 +137,9 @@ export default function OnboardingPage() {
   const [planPrice, setPlanPrice] = useState<string>("$0");
   const [billingComplete, setBillingComplete] = useState(false);
 
+  // Plan-based service limits
+  const maxServices = PLAN_LIMITS[(planTier as PlanTier) || "free"]?.maxServices ?? PLAN_LIMITS.free.maxServices;
+
   // Whether to show the billing step (non-free plan + Stripe configured)
   const showBilling = planTier !== "free" && !!stripePromise;
   const totalSteps = showBilling ? MAX_STEPS : MAX_STEPS - 1;
@@ -161,8 +166,8 @@ export default function OnboardingPage() {
       }
       if (data?.plan_tier) {
         setPlanTier(data.plan_tier);
-        if (data.plan_tier === "beta") {
-          setPlanName("Beta");
+        if (data.plan_tier === "beta" || data.plan_tier === "starter") {
+          setPlanName("Starter");
           setPlanPrice("$99/mo");
         }
       }
@@ -222,8 +227,10 @@ export default function OnboardingPage() {
           }
         }
       }
-      // Remove services for deselected industries
-      const filtered = newServices.filter((s) => selectedIndustries.includes(s.industry));
+      // Remove services for deselected industries and enforce plan limit
+      const filtered = newServices
+        .filter((s) => selectedIndustries.includes(s.industry))
+        .slice(0, maxServices);
       setServices(filtered);
     }
 
@@ -245,6 +252,7 @@ export default function OnboardingPage() {
   // ── Step 2 helpers ──
 
   function addService(industry: string) {
+    if (services.length >= maxServices) return;
     const defaultMargin = MARGIN_RANGES[industry]
       ? Math.round((MARGIN_RANGES[industry].low + MARGIN_RANGES[industry].high) / 2)
       : 30;
@@ -266,6 +274,7 @@ export default function OnboardingPage() {
 
   function addSuggestion(industry: string, name: string, value: number) {
     if (services.some((s) => s.name === name && s.industry === industry)) return;
+    if (services.length >= maxServices) return;
     const defaultMargin = MARGIN_RANGES[industry]
       ? Math.round((MARGIN_RANGES[industry].low + MARGIN_RANGES[industry].high) / 2)
       : 30;
@@ -393,6 +402,8 @@ export default function OnboardingPage() {
             onUpdateService={updateService}
             onAddSuggestion={addSuggestion}
             otherLabel={otherIndustry}
+            maxServices={maxServices}
+            isFreePlan={planTier === "free"}
           />
         )}
         {currentActualStep === 3 && (
@@ -549,6 +560,8 @@ function StepServices({
   onUpdateService,
   onAddSuggestion,
   otherLabel,
+  maxServices,
+  isFreePlan,
 }: {
   industries: string[];
   services: ServiceEntry[];
@@ -557,7 +570,11 @@ function StepServices({
   onUpdateService: (id: string, field: keyof ServiceEntry, value: string | number) => void;
   onAddSuggestion: (industry: string, name: string, value: number) => void;
   otherLabel: string;
+  maxServices: number;
+  isFreePlan: boolean;
 }) {
+  const atLimit = services.length >= maxServices;
+
   function industryLabel(id: string) {
     if (id === "other") return otherLabel || "Other";
     return INDUSTRIES.find((i) => i.id === id)?.label || id;
@@ -572,7 +589,20 @@ function StepServices({
         Add your services and their average job value. This helps us set up your rewards automatically.
       </p>
 
-      <div className="mt-8 space-y-8">
+      {/* Service counter */}
+      <p className="mt-4 text-sm font-medium text-[#64748B]">
+        {services.length} of {maxServices} services added
+      </p>
+      {atLimit && isFreePlan && (
+        <div className="mt-2 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+          <span className="text-amber-500">&#x26A0;&#xFE0F;</span>
+          <p className="text-xs text-amber-700">
+            Upgrade to Starter to add more services
+          </p>
+        </div>
+      )}
+
+      <div className="mt-4 space-y-8">
         {industries.map((ind) => {
           const indServices = services.filter((s) => s.industry === ind);
           const suggestions = SERVICE_SUGGESTIONS[ind] || [];
@@ -591,7 +621,12 @@ function StepServices({
                       <button
                         key={s.name}
                         onClick={() => onAddSuggestion(ind, s.name, s.value)}
-                        className="rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-medium text-[#0D9488] transition-colors hover:bg-teal-100"
+                        disabled={atLimit}
+                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                          atLimit
+                            ? "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+                            : "border-teal-200 bg-teal-50 text-[#0D9488] hover:bg-teal-100"
+                        }`}
                       >
                         + {s.name}
                       </button>
@@ -632,7 +667,12 @@ function StepServices({
 
               <button
                 onClick={() => onAddService(ind)}
-                className="mt-2 flex items-center gap-1 text-sm font-medium text-[#0D9488] hover:underline"
+                disabled={atLimit}
+                className={`mt-2 flex items-center gap-1 text-sm font-medium ${
+                  atLimit
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "text-[#0D9488] hover:underline"
+                }`}
               >
                 <Plus className="h-4 w-4" />
                 Add custom service

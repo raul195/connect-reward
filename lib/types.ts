@@ -7,7 +7,7 @@ export type ReferralStatus = "submitted" | "contacted" | "consultation_scheduled
 export type RewardCategory = string;
 export type RedemptionStatus = "pending" | "approved" | "fulfilled" | "rejected";
 export type NotificationType = "referral_update" | "reward_earned" | "achievement" | "system";
-export type PlanTier = "free" | "beta";
+export type PlanTier = "free" | "beta" | "starter";
 export type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum";
 export type PointTxType = "referral_completed" | "redemption" | "signup_bonus" | "manual_adjustment" | "milestone_bonus";
 

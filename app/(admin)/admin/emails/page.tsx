@@ -48,6 +48,9 @@ import {
   BanIcon,
 } from "lucide-react";
 import { relativeTime } from "@/lib/relative-time";
+import { useCompany } from "@/hooks/useCompany";
+import { isFreePlan as checkFreePlan } from "@/lib/plan-limits";
+import { UpgradeCTA } from "@/components/shared/UpgradeCTA";
 import type { EmailDraft, AutomationTriggerType, TonePreference } from "@/lib/types";
 import { textToHtml, injectVariables } from "@/lib/email/injectVariables";
 import {
@@ -434,6 +437,8 @@ function formatTemplateName(name: string): string {
 export default function EmailsPage() {
   const router = useRouter();
   const { profile } = useProfile();
+  const { company } = useCompany(profile?.company_id);
+  const isFreePlan = checkFreePlan(company?.plan_tier);
   const [pendingDrafts, setPendingDrafts] = useState<DraftWithProfile[]>([]);
   const [sentDrafts, setSentDrafts] = useState<DraftWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1061,6 +1066,32 @@ export default function EmailsPage() {
     },
     {}
   );
+
+  if (isFreePlan) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Emails</h1>
+          <p className="text-muted-foreground">
+            Review and approve automated email drafts before they are sent.
+          </p>
+        </div>
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 py-16 px-8 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-200 mb-4">
+            <Mail className="h-7 w-7 text-gray-400" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-700">Email Automation</h2>
+          <p className="mt-2 max-w-md text-sm text-gray-500">
+            Email automation is available on the Starter plan. Upgrade to unlock automated referral emails and campaigns.
+          </p>
+          <UpgradeCTA
+            message="Upgrade to Starter to unlock email automation"
+            className="mt-6"
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

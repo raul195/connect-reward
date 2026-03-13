@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthContext, requireAdmin } from "@/lib/api-helpers";
+import { isAtLimit } from "@/lib/plan-limits";
+import type { PlanTier } from "@/lib/types";
 
 export async function GET() {
   try {
@@ -38,6 +40,25 @@ export async function POST(request: Request) {
     if (forbidden) return forbidden;
 
     const cid = profile.company_id!;
+
+    // Check plan limit
+    const { data: companyData } = await admin
+      .from("companies")
+      .select("plan_tier")
+      .eq("id", cid)
+      .single();
+    const plan = (companyData?.plan_tier ?? "free") as PlanTier;
+    const { count: rewardCount } = await admin
+      .from("rewards")
+      .select("id", { count: "exact", head: true })
+      .eq("company_id", cid);
+    if (isAtLimit(plan, "rewards", rewardCount ?? 0)) {
+      return NextResponse.json(
+        { error: "You've reached your plan's reward limit. Upgrade to add more." },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
 
     const { data: reward, error } = await admin

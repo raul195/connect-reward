@@ -6,8 +6,10 @@ import { Sidebar, type NavItem } from "@/components/shared/Sidebar";
 import { Header } from "@/components/shared/Header";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { DemoModeBanner } from "@/components/shared/DemoModeBanner";
+import { FreePlanBanner } from "@/components/shared/FreePlanBanner";
 import { useProfile } from "@/hooks/useProfile";
 import { useCompany } from "@/hooks/useCompany";
+import { isFreePlan } from "@/lib/plan-limits";
 
 const adminNav: NavItem[] = [
   {
@@ -116,6 +118,7 @@ export default function AdminLayout({
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <DemoModeBanner />
+      {isFreePlan(company?.plan_tier) && <FreePlanBanner />}
       <div className="flex flex-1 overflow-hidden">
         <Sidebar navItems={adminNav} brandLabel="Connect Reward" />
         <div className="flex flex-1 flex-col overflow-hidden">

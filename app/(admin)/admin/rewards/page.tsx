@@ -63,8 +63,8 @@ export default function RewardsManagement() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const planTier = (company?.plan_tier ?? "free") as "free" | "beta";
-  const rewardLimit = PLAN_LIMITS[planTier].maxRewards;
+  const planTier = (company?.plan_tier ?? "free") as keyof typeof PLAN_LIMITS;
+  const rewardLimit = PLAN_LIMITS[planTier]?.maxRewards ?? PLAN_LIMITS.free.maxRewards;
   const atRewardLimit = rewards.length >= rewardLimit;
 
   const [useSample, setUseSample] = useState(false);
@@ -199,7 +199,15 @@ export default function RewardsManagement() {
         </div>
       </div>
 
-      {atRewardLimit && <UpgradeCTA message={`You've reached your ${rewardLimit}-reward limit. Upgrade to add more.`} />}
+      {atRewardLimit && (
+        <UpgradeCTA
+          message={
+            planTier === "free"
+              ? "You've reached the free plan limit of 3 rewards. Upgrade to Starter to add up to 10 rewards."
+              : `You've reached your ${rewardLimit}-reward limit. Upgrade to add more.`
+          }
+        />
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {/* Add card */}
