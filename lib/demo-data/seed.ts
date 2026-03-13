@@ -40,7 +40,7 @@ export async function seedDemoData() {
 
   // 1. Create company
   const { data: company, error: companyError } = await admin
-    .from("companies")
+    .from("businesses")
     .insert({
       name: "Demo Solar Co",
       slug: DEMO_COMPANY_SLUG,

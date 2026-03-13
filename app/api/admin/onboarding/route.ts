@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
     // 1. Fetch current settings to merge
     const { data: current } = await admin
-      .from("companies")
+      .from("businesses")
       .select("settings")
       .eq("id", cid)
       .single();
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
     // 2. Update company industry + settings + mark onboarding complete
     const { error: companyError } = await admin
-      .from("companies")
+      .from("businesses")
       .update({
         industry: industries.join(", "),
         settings: mergedSettings,
@@ -96,7 +96,7 @@ export async function GET() {
   const cid = profile.company_id!;
 
   const { data: company } = await admin
-    .from("companies")
+    .from("businesses")
     .select("onboarding_completed, industry, settings, plan_tier, name")
     .eq("id", cid)
     .single();

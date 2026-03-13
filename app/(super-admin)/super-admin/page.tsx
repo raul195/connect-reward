@@ -42,7 +42,7 @@ export default function SuperAdminOverview() {
     ] = await Promise.all([
       supabase.from("early_access_applications").select("*", { count: "exact", head: true }),
       supabase.from("early_access_applications").select("*", { count: "exact", head: true }).gte("submitted_at", weekAgo),
-      supabase.from("companies").select("*", { count: "exact", head: true }),
+      supabase.from("businesses").select("*", { count: "exact", head: true }),
       supabase.from("profiles").select("*", { count: "exact", head: true }),
       supabase.from("referrals").select("*", { count: "exact", head: true }),
     ]);

@@ -23,7 +23,7 @@ export async function POST() {
 
   // Fetch company to check for existing Stripe customer
   const { data: company } = await admin
-    .from("companies")
+    .from("businesses")
     .select("stripe_customer_id, name")
     .eq("id", cid)
     .single();
@@ -44,7 +44,7 @@ export async function POST() {
     customerId = customer.id;
 
     await admin
-      .from("companies")
+      .from("businesses")
       .update({ stripe_customer_id: customerId })
       .eq("id", cid);
   }

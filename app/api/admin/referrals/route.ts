@@ -135,7 +135,7 @@ export async function PUT(request: Request) {
           .single();
 
         const { data: companyData } = await admin
-          .from("companies")
+          .from("businesses")
           .select("name, logo_url, settings")
           .eq("id", cid)
           .single();

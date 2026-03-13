@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
 
   // Send reward redeemed email (fire-and-forget)
   const { data: companyData } = await admin
-    .from("companies")
+    .from("businesses")
     .select("name, logo_url, settings")
     .eq("id", profile.company_id!)
     .single();

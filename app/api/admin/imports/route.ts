@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
   // Check plan limit: current customers + new rows <= limit
   const { data: company } = await admin
-    .from("companies")
+    .from("businesses")
     .select("plan_tier")
     .eq("id", cid)
     .single();

@@ -136,7 +136,7 @@ function TicketsTab() {
     (async () => {
       const supabase = createClient();
       const { data } = await supabase
-        .from("companies")
+        .from("businesses")
         .select("id, name")
         .order("name");
       setCompanies(data ?? []);

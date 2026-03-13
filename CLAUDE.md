@@ -42,6 +42,8 @@ const cid = profile.company_id!;
 
 Always scope queries by `company_id`. Never leak data across companies.
 
+**IMPORTANT:** The Supabase table for businesses is called `businesses` (NOT `companies`). Always use `.from("businesses")` in Supabase queries. The TypeScript interface is `Company` and the column is `company_id`, but the table name is `businesses`.
+
 ## Key Conventions
 
 ### API Routes

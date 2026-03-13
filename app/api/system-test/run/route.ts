@@ -132,7 +132,7 @@ export async function POST() {
 
   // 6. Free plan companies within customer limits
   const { data: allCompanies } = await admin
-    .from("companies")
+    .from("businesses")
     .select("id, name, plan_tier");
   const freeLimit = PLAN_LIMITS.free.maxCustomers;
   let overLimitCount = 0;

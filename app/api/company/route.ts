@@ -12,7 +12,7 @@ export async function GET() {
   }
 
   const { data: company } = await admin
-    .from("companies")
+    .from("businesses")
     .select("*")
     .eq("id", profile.company_id)
     .single();

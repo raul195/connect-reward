@@ -15,7 +15,7 @@ export async function GET() {
     const cid = profile.company_id!;
 
     const [companyRes, servicesRes] = await Promise.all([
-      admin.from("companies").select("*").eq("id", cid).single(),
+      admin.from("businesses").select("*").eq("id", cid).single(),
       admin
         .from("services")
         .select("*")
@@ -49,7 +49,7 @@ export async function PUT(request: Request) {
     const body = await request.json();
 
     const { data: company, error } = await admin
-      .from("companies")
+      .from("businesses")
       .update(body)
       .eq("id", cid)
       .select()
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
     } else {
       // Insert new service — check plan limit first
       const { data: companyRow } = await admin
-        .from("companies")
+        .from("businesses")
         .select("plan_tier")
         .eq("id", cid)
         .single();

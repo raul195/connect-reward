@@ -37,7 +37,7 @@ export default function CompaniesPage() {
     setLoading(true);
     const supabase = createClient();
 
-    let query = supabase.from("companies")
+    let query = supabase.from("businesses")
       .select("*", { count: "exact" })
       .order("created_at", { ascending: false })
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
@@ -64,7 +64,7 @@ export default function CompaniesPage() {
 
   async function updatePlan(id: string, plan_tier: PlanTier) {
     const supabase = createClient();
-    await supabase.from("companies").update({ plan_tier }).eq("id", id);
+    await supabase.from("businesses").update({ plan_tier }).eq("id", id);
     setCompanies(prev => prev.map(c => c.id === id ? { ...c, plan_tier } : c));
     toast.success("Plan updated.");
   }
