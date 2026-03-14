@@ -43,11 +43,12 @@ const customerNav: NavItem[] = [
     href: "/dashboard/rewards",
     icon: <Gift className="h-5 w-5" />,
   },
-  {
-    label: "Store",
-    href: "/dashboard/store",
-    icon: <Store className="h-5 w-5" />,
-  },
+  // TODO: CatalogAPI integration — not yet active
+  // {
+  //   label: "Store",
+  //   href: "/dashboard/store",
+  //   icon: <Store className="h-5 w-5" />,
+  // },
   {
     label: "Reviews",
     href: "/dashboard/reviews",

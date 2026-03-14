@@ -376,7 +376,8 @@ export interface FeedbackResponse {
 }
 
 // ── CatalogAPI v2 Types ──
-
+// TODO: CatalogAPI integration — not yet active
+/*
 export interface CatalogSocket {
   socket_id: number;
   socket_name: string;
@@ -541,3 +542,4 @@ export interface CatalogStockInfo {
   estimated_ship_date: string | null;
   last_updated: string;
 }
+*/

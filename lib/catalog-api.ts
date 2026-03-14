@@ -1,3 +1,10 @@
+// TODO: CatalogAPI integration — not yet active
+// This entire module is commented out. The rewards catalog is currently
+// manual-only (business owners create their own rewards).
+// When CatalogAPI is ready to launch, uncomment and configure env vars:
+//   CATALOG_API_TOKEN, CATALOG_API_BASE_URL, CATALOG_SOCKET_ID
+
+/*
 // ============================================================
 // CatalogAPI v2 — Server-side client
 // All requests go through this module so the bearer token
@@ -325,3 +332,4 @@ export function getOrder(externalOrderId: string) {
     `/orders/${encodeURIComponent(externalOrderId)}`
   );
 }
+*/
