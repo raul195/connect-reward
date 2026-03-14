@@ -33,6 +33,15 @@ export async function getAuthContext(): Promise<
     return { error: NextResponse.json({ error: "Profile not found" }, { status: 404 }) };
   }
 
+  // Touch last_active on the company for business users (fire-and-forget)
+  if (profile.company_id && profile.role !== "customer") {
+    admin
+      .from("companies")
+      .update({ last_active: new Date().toISOString() })
+      .eq("id", profile.company_id)
+      .then(() => {});
+  }
+
   return { ctx: { user, profile: profile as Profile, admin } };
 }
 
@@ -42,6 +51,13 @@ export function requireAdmin(profile: Profile): NextResponse | null {
   }
   if (!profile.company_id) {
     return NextResponse.json({ error: "No company associated" }, { status: 403 });
+  }
+  return null;
+}
+
+export function requireSuperAdmin(profile: Profile): NextResponse | null {
+  if (profile.role !== "super_admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return null;
 }

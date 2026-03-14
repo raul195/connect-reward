@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Sidebar, type NavItem } from "@/components/shared/Sidebar";
 import { Header } from "@/components/shared/Header";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
@@ -56,7 +58,24 @@ export default function SuperAdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { profile } = useProfile();
+  const { profile, loading } = useProfile();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && profile && profile.role !== "super_admin") {
+      router.replace("/admin");
+    }
+  }, [profile, loading, router]);
+
+  if (loading || !profile) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (profile.role !== "super_admin") return null;
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">

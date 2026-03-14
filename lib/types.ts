@@ -25,6 +25,7 @@ export interface Company {
   customer_count: number;
   onboarding_completed: boolean;
   is_active: boolean;
+  last_active: string | null;
   created_at: string;
   updated_at: string;
 }
