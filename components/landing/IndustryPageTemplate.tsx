@@ -13,7 +13,6 @@ import {
   Award,
   Target,
   TrendingUp,
-  Quote,
 } from "lucide-react";
 import type { IndustryPageData } from "@/lib/industry-pages";
 import { Navbar } from "./Navbar";
@@ -296,42 +295,6 @@ export function IndustryPageTemplate({ data }: { data: IndustryPageData }) {
                 ))}
               </div>
             </FadeIn>
-          </div>
-        </section>
-
-        {/* Testimonials */}
-        <section className="bg-[#F8FAFC]">
-          <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-            <FadeIn className="text-center">
-              <h2 className="text-3xl font-extrabold text-[#1A202C] sm:text-4xl">
-                What {data.name} Companies Are Saying
-              </h2>
-              <p className="mt-3 text-sm font-medium text-[#F59E0B]">
-                [PLACEHOLDER — replace with real testimonials]
-              </p>
-            </FadeIn>
-
-            <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {data.testimonials.map((t, i) => (
-                <FadeIn key={i} delay={i * 0.1}>
-                  <div className="flex flex-col rounded-2xl bg-white p-8 shadow-md">
-                    <Quote className="h-8 w-8 text-[#0D9488] opacity-40" />
-                    <p className="mt-4 flex-1 text-[#64748B] leading-relaxed">
-                      &ldquo;{t.quote}&rdquo;
-                    </p>
-                    <div className="mt-6 border-t border-gray-100 pt-4">
-                      <p className="font-semibold text-[#1A202C]">
-                        {t.name}
-                      </p>
-                      <p className="text-sm text-[#64748B]">{t.company}</p>
-                      <p className="mt-1 text-xs text-[#F59E0B]">
-                        [PLACEHOLDER]
-                      </p>
-                    </div>
-                  </div>
-                </FadeIn>
-              ))}
-            </div>
           </div>
         </section>
 
