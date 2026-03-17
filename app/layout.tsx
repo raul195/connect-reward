@@ -29,10 +29,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io"),
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/CRicon.png", type: "image/png" },
     ],
     apple: [
-      { url: "/apple-icon.svg", type: "image/svg+xml" },
+      { url: "/CRicon.png", type: "image/png" },
     ],
   },
   manifest: "/manifest.json",
@@ -42,6 +42,7 @@ export const metadata: Metadata = {
     url: "https://connectreward.io",
     siteName: "Connect Reward",
     type: "website",
+    locale: "en_US",
     images: [
       {
         url: "/og-image.png",
