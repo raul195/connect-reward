@@ -52,6 +52,18 @@ import {
   FeedbackEmail,
   getFeedbackSubject,
 } from "./templates/FeedbackEmail";
+import {
+  RedemptionRequestedEmail,
+  getRedemptionRequestedSubject,
+} from "./templates/RedemptionRequestedEmail";
+import {
+  RedemptionFulfilledEmail,
+  getRedemptionFulfilledSubject,
+} from "./templates/RedemptionFulfilledEmail";
+import {
+  RedemptionRejectedEmail,
+  getRedemptionRejectedSubject,
+} from "./templates/RedemptionRejectedEmail";
 import type { BrandingProps } from "./templates/types";
 import type { ReferralStatus, LoyaltyTier } from "@/lib/types";
 
@@ -162,6 +174,25 @@ interface TemplateMap {
     adminName: string;
     dashboardUrl: string;
   } & BrandingProps;
+  redemption_requested: {
+    customerName: string;
+    rewardName: string;
+    pointsSpent: number;
+    dollarValue: string;
+    dashboardUrl: string;
+  } & BrandingProps;
+  redemption_fulfilled: {
+    customerName: string;
+    rewardName: string;
+    dashboardUrl: string;
+  } & BrandingProps;
+  redemption_rejected: {
+    customerName: string;
+    rewardName: string;
+    rejectionReason: string;
+    pointsRestored: number;
+    dashboardUrl: string;
+  } & BrandingProps;
 }
 
 export type TemplateName = keyof TemplateMap;
@@ -183,6 +214,9 @@ const PREF_KEY_MAP: Record<TemplateName, keyof NotificationPreferences | null> =
     promotion_last_chance: null,
     ticket_resolved: null, // transactional
     feedback_request: null, // transactional, always send
+    redemption_requested: null, // transactional, always send to business
+    redemption_fulfilled: "reward_fulfilled",
+    redemption_rejected: null, // transactional, always send
   };
 
 // ---------- Render helpers ----------
@@ -288,6 +322,27 @@ function renderTemplate<T extends TemplateName>(
       return {
         element: React.createElement(FeedbackEmail, p),
         subject: getFeedbackSubject(),
+      };
+    }
+    case "redemption_requested": {
+      const p = props as TemplateMap["redemption_requested"];
+      return {
+        element: React.createElement(RedemptionRequestedEmail, p),
+        subject: getRedemptionRequestedSubject(p.customerName),
+      };
+    }
+    case "redemption_fulfilled": {
+      const p = props as TemplateMap["redemption_fulfilled"];
+      return {
+        element: React.createElement(RedemptionFulfilledEmail, p),
+        subject: getRedemptionFulfilledSubject(),
+      };
+    }
+    case "redemption_rejected": {
+      const p = props as TemplateMap["redemption_rejected"];
+      return {
+        element: React.createElement(RedemptionRejectedEmail, p),
+        subject: getRedemptionRejectedSubject(),
       };
     }
     default:

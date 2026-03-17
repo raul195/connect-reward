@@ -244,6 +244,90 @@ function ActivityFeed({ transactions }: { transactions: PointTransaction[] }) {
   );
 }
 
+// ── Rewards Widget ──────────────────────────────
+function RewardsWidget({ profile }: { profile: Profile }) {
+  const [rewardsData, setRewardsData] = useState<{
+    rewards: { id: string; name: string; points_required: number }[];
+    favoriteIds: string[];
+  } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [rwRes, favRes] = await Promise.all([
+          fetch("/api/customer/rewards"),
+          fetch("/api/customer/favorites"),
+        ]);
+        const rwData = rwRes.ok ? await rwRes.json() : { rewards: [] };
+        const favData = favRes.ok ? await favRes.json() : { favoriteIds: [] };
+        setRewardsData({
+          rewards: rwData.rewards ?? [],
+          favoriteIds: favData.favoriteIds ?? [],
+        });
+      } catch { /* ignore */ }
+    })();
+  }, []);
+
+  if (!rewardsData) return null;
+
+  const { rewards, favoriteIds } = rewardsData;
+
+  if (rewards.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex items-center gap-4 p-5">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+            <Gift className="h-6 w-6" />
+          </span>
+          <div>
+            <p className="font-semibold">Your rewards catalog is coming soon!</p>
+            <p className="text-sm text-muted-foreground">Check back later for exciting rewards.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const affordable = rewards.filter(
+    (r: { points_required: number }) => profile.total_points >= r.points_required
+  ).length;
+  const topFav = favoriteIds.length > 0
+    ? rewards.find((r: { id: string }) => favoriteIds.includes(r.id) && r.id)
+    : null;
+
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+              <Gift className="h-6 w-6" />
+            </span>
+            <div>
+              <p className="text-sm text-muted-foreground">Rewards You Can Afford</p>
+              <p className="text-2xl font-bold">{affordable}</p>
+            </div>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/dashboard/rewards">Browse Rewards</Link>
+          </Button>
+        </div>
+        {topFav && profile.total_points < (topFav as { points_required: number }).points_required && (
+          <div className="mt-4">
+            <p className="text-xs text-muted-foreground mb-1">
+              Saving for: <span className="font-medium text-foreground">{(topFav as { name: string }).name}</span>
+            </p>
+            <Progress
+              value={(profile.total_points / (topFav as { points_required: number }).points_required) * 100}
+              className="h-2 [&>div]:bg-amber-500"
+            />
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Quick Actions ───────────────────────────────
 function QuickActions() {
   const actions = [
@@ -484,6 +568,7 @@ export default function CustomerDashboard() {
 
       <PointsCard profile={profile} />
       <StatsGrid stats={stats} />
+      <RewardsWidget profile={profile} />
       <div className="grid gap-6 lg:grid-cols-2">
         <ActivityFeed transactions={transactions} />
         <QuickActions />

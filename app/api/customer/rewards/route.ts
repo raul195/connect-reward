@@ -106,17 +106,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Send reward redeemed email (fire-and-forget)
+  // Send reward redeemed email to customer (fire-and-forget)
   const { data: companyData } = await admin
     .from("companies")
     .select("name, logo_url, settings")
     .eq("id", profile.company_id!)
     .single();
 
-  if (companyData) {
-    const settings = (companyData.settings ?? {}) as Record<string, unknown>;
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io";
+  const settings = (companyData?.settings ?? {}) as Record<string, unknown>;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io";
 
+  if (companyData) {
     sendTransactionalEmail({
       template: "reward_redeemed",
       to: profile.email,
@@ -128,11 +128,42 @@ export async function POST(request: NextRequest) {
         dashboardUrl: `${baseUrl}/dashboard`,
         companyName: companyData.name,
         logoUrl: companyData.logo_url,
-        primaryColor: (settings.brandColor as string) || "#6366f1",
+        primaryColor: (settings.brandColor as string) || "#0D9488",
       },
       companyId: profile.company_id!,
       customerId: profile.id,
       preferences: profile.notification_preferences,
+      adminClient: admin,
+    }).catch(() => {});
+  }
+
+  // Send notification email to business owner (all plans)
+  const { data: businessOwner } = await admin
+    .from("profiles")
+    .select("id, email, notification_preferences")
+    .eq("company_id", profile.company_id!)
+    .in("role", ["business_owner", "business"])
+    .limit(1)
+    .single();
+
+  if (businessOwner && companyData) {
+    const dollarValue = (reward.points_required / 100).toFixed(2);
+    sendTransactionalEmail({
+      template: "redemption_requested",
+      to: businessOwner.email,
+      props: {
+        customerName: profile.full_name,
+        rewardName: reward.name,
+        pointsSpent: reward.points_required,
+        dollarValue,
+        dashboardUrl: `${baseUrl}/admin/rewards`,
+        companyName: companyData.name,
+        logoUrl: companyData.logo_url,
+        primaryColor: (settings.brandColor as string) || "#0D9488",
+      },
+      companyId: profile.company_id!,
+      customerId: null,
+      preferences: businessOwner.notification_preferences,
       adminClient: admin,
     }).catch(() => {});
   }

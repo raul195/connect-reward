@@ -123,6 +123,7 @@ export interface Redemption {
   points_spent: number;
   status: RedemptionStatus;
   fulfillment_notes: string | null;
+  fulfilled_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -136,6 +137,13 @@ export interface PointTransaction {
   description: string | null;
   reference_id: string | null;
   promotion_id: string | null;
+  created_at: string;
+}
+
+export interface CustomerFavorite {
+  id: string;
+  customer_id: string;
+  reward_id: string;
   created_at: string;
 }
 

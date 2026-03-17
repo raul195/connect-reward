@@ -52,6 +52,54 @@ interface ActivityItem {
   time: string;
 }
 
+function PendingRedemptionsWidget() {
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/redemptions");
+        if (!res.ok) return;
+        const data = await res.json();
+        const pending = (data.redemptions ?? []).filter(
+          (r: { status: string }) => r.status === "pending"
+        ).length;
+        setCount(pending);
+      } catch { /* ignore */ }
+    })();
+  }, []);
+
+  if (count === null) return null;
+
+  return (
+    <Card className={count > 0 ? "border-amber-200 bg-amber-50" : ""}>
+      <CardContent className="flex items-center justify-between p-5">
+        <div className="flex items-center gap-3">
+          <span className={`flex h-10 w-10 items-center justify-center rounded-lg ${count > 0 ? "bg-amber-200 text-amber-700" : "bg-muted text-muted-foreground"}`}>
+            <Gift className="h-5 w-5" />
+          </span>
+          <div>
+            <p className={`font-semibold ${count > 0 ? "text-amber-900" : ""}`}>
+              {count === 0 ? "No pending redemptions" : `${count} pending redemption${count > 1 ? "s" : ""}`}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {count > 0 ? "Customers are waiting for their rewards" : "All caught up!"}
+            </p>
+          </div>
+        </div>
+        {count > 0 && (
+          <Link
+            href="/admin/rewards"
+            className="text-sm font-semibold text-amber-700 hover:text-amber-800"
+          >
+            View requests &rarr;
+          </Link>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AdminDashboard() {
   const { profile } = useProfile();
   const [metrics, setMetrics] = useState<Metrics>({
@@ -311,6 +359,9 @@ export default function AdminDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pending Redemptions Widget */}
+      <PendingRedemptionsWidget />
 
       {/* Bottom row */}
       <div className="grid gap-6 lg:grid-cols-2">
