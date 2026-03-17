@@ -177,7 +177,7 @@ export async function awardReferralCompletion(
   });
 
   // 8. Check achievements (tier changes, referral milestones)
-  checkAndAwardAchievements(profile.id, referral.company_id, supabase).catch(() => {});
+  checkAndAwardAchievements(profile.id, referral.company_id, supabase).catch((err) => console.error("Background task failed:", err));
 
   // 9. Send points earned email (fire-and-forget)
   const { data: customerProfile } = await supabase
@@ -217,7 +217,7 @@ export async function awardReferralCompletion(
       customerId: profile.id,
       preferences: customerProfile.notification_preferences,
       adminClient: supabase,
-    }).catch(() => {});
+    }).catch((err) => console.error("Background task failed:", err));
   }
 }
 
@@ -256,7 +256,7 @@ export async function manualPointAdjustment(
     .eq("id", userId);
 
   // 3. Check achievements (tier changes)
-  checkAndAwardAchievements(userId, companyId, supabase).catch(() => {});
+  checkAndAwardAchievements(userId, companyId, supabase).catch((err) => console.error("Background task failed:", err));
 
   // 4. Notify customer
   await supabase.from("notifications").insert({
@@ -305,7 +305,7 @@ export async function manualPointAdjustment(
         customerId: userId,
         preferences: customerData.notification_preferences,
         adminClient: supabase,
-      }).catch(() => {});
+      }).catch((err) => console.error("Background task failed:", err));
     }
   }
 }
@@ -376,7 +376,7 @@ export async function awardReviewPoints(
   });
 
   // Check achievements (left_review, tier changes)
-  checkAndAwardAchievements(review.user_id, review.company_id, supabase).catch(() => {});
+  checkAndAwardAchievements(review.user_id, review.company_id, supabase).catch((err) => console.error("Background task failed:", err));
 
   // Send points earned email (fire-and-forget)
   if (profile) {
@@ -418,7 +418,7 @@ export async function awardReviewPoints(
         customerId: review.user_id,
         preferences: customerData.notification_preferences,
         adminClient: supabase,
-      }).catch(() => {});
+      }).catch((err) => console.error("Background task failed:", err));
     }
   }
 }

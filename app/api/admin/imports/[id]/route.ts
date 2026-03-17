@@ -258,7 +258,7 @@ export async function POST(
             customerId: newUser.user.id,
             preferences: null,
             adminClient: admin,
-          }).catch(() => {});
+          }).catch((err) => console.error("Email send failed:", err));
           await logEmailSend(cid, "welcome_import", newUser.user.id, admin);
         }
       }

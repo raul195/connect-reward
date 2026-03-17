@@ -97,9 +97,26 @@ export async function GET() {
         .limit(20),
     ]);
 
-    // Sum points this month
+    // Log any individual query errors
+    const queryResults = [
+      { name: "customerCount", res: customerCountRes },
+      { name: "referralsThisMonth", res: referralsThisMonthRes },
+      { name: "referralsLastMonth", res: referralsLastMonthRes },
+      { name: "pointsThisMonth", res: pointsThisMonthRes },
+      { name: "totalReferrals", res: totalReferralsRes },
+      { name: "completedReferrals", res: completedReferralsRes },
+      { name: "pipeline", res: pipelineRes },
+      { name: "recentActivity", res: recentActivityRes },
+    ];
+    for (const q of queryResults) {
+      if (q.res.error) {
+        console.error(`Dashboard query [${q.name}] failed:`, q.res.error.message);
+      }
+    }
+
+    // Sum points this month (with null safety)
     const pointsThisMonth = (pointsThisMonthRes.data ?? []).reduce(
-      (sum: number, tx: { amount: number }) => sum + tx.amount,
+      (sum: number, tx: { amount: number }) => sum + (tx.amount ?? 0),
       0
     );
 

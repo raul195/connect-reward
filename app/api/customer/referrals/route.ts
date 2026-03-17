@@ -7,11 +7,12 @@ export async function GET() {
   if (result.error) return result.error;
   const { user, profile, admin } = result.ctx;
 
-  // Get user's referrals
+  // Get user's referrals (scoped to their company)
   const { data: referrals } = await admin
     .from("referrals")
     .select("*")
     .eq("submitted_by", user.id)
+    .eq("company_id", profile.company_id!)
     .order("created_at", { ascending: false });
 
   // Get services for company to build name map
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Check achievements (first_referral_submitted, quick_start, etc.)
-  checkAndAwardAchievements(user.id, profile.company_id!, admin).catch(() => {});
+  checkAndAwardAchievements(user.id, profile.company_id!, admin).catch((err) => console.error("Background task failed:", err));
 
   return NextResponse.json({ success: true });
 }

@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       customerId: profile.id,
       preferences: profile.notification_preferences,
       adminClient: admin,
-    }).catch(() => {});
+    }).catch((err) => console.error("Email send failed:", err));
   }
 
   // Send notification email to business owner (all plans)
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
       customerId: null,
       preferences: businessOwner.notification_preferences,
       adminClient: admin,
-    }).catch(() => {});
+    }).catch((err) => console.error("Email send failed:", err));
   }
 
   return NextResponse.json({ success: true });

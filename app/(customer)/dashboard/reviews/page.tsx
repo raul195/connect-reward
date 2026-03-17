@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client"; // TODO: replace with /api/customer/reviews when route is created
 import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,24 +47,28 @@ export default function ReviewsPage() {
     }
 
     setSubmitting(true);
-    const supabase = createClient();
 
-    const { error } = await supabase.from("reviews").insert({
-      company_id: profile.company_id!,
-      profile_id: profile.id,
-      rating: 5,
-      comment: `Platform: ${platform}\nReview URL: ${reviewUrl}`,
-    });
+    try {
+      const res = await fetch("/api/customer/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platform, reviewUrl }),
+      });
 
-    if (error) {
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || "Failed to submit review. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+
+      setSubmitted(true);
+      setSubmitting(false);
+      toast.success("Review submitted for verification! You'll earn 25 points once verified.");
+    } catch {
       toast.error("Failed to submit review. Please try again.");
       setSubmitting(false);
-      return;
     }
-
-    setSubmitted(true);
-    setSubmitting(false);
-    toast.success("Review submitted for verification! You'll earn 25 points once verified.");
   }
 
   if (submitted) {

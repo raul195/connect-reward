@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
       customerId: newUser.user.id,
       preferences: null,
       adminClient: admin,
-    }).catch(() => {});
+    }).catch((err) => console.error("Email send failed:", err));
   }
 
   return NextResponse.json({ id: newUser.user.id }, { status: 201 });

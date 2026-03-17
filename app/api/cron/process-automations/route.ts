@@ -680,9 +680,8 @@ async function checkDuplicate(
     .eq("status", "sent")
     .gte("created_at", thirtyDaysAgo.toISOString());
 
-  // Only consider it a duplicate if there's a matching template in logs
-  // We check template_name since email_logs doesn't have trigger_type
-  return (logCount || 0) > 0 && (draftCount || 0) > 0;
+  // Flag as duplicate if EITHER a draft exists OR a sent email exists
+  return (logCount || 0) > 0 || (draftCount || 0) > 0;
 }
 
 export async function POST(req: NextRequest) {

@@ -102,7 +102,7 @@ export async function PUT(request: Request) {
         .eq("id", id)
         .single();
       if (ref) {
-        checkAndAwardAchievements(ref.submitted_by, cid, admin).catch(() => {});
+        checkAndAwardAchievements(ref.submitted_by, cid, admin).catch((err) => console.error("Background task failed:", err));
       }
     } else {
       // Update referral status
@@ -161,7 +161,7 @@ export async function PUT(request: Request) {
             customerId: referral.submitted_by,
             preferences: customer.notification_preferences,
             adminClient: admin,
-          }).catch(() => {});
+          }).catch((err) => console.error("Background task failed:", err));
         }
       }
     }

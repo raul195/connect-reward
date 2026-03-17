@@ -113,7 +113,7 @@ export async function PUT(request: NextRequest) {
           customerId: redemption.user_id,
           preferences: redemption.customer.notification_preferences,
           adminClient: admin,
-        }).catch(() => {});
+        }).catch((err) => console.error("Email send failed:", err));
       }
 
       return NextResponse.json({ success: true });
@@ -180,7 +180,7 @@ export async function PUT(request: NextRequest) {
           customerId: redemption.user_id,
           preferences: null,
           adminClient: admin,
-        }).catch(() => {});
+        }).catch((err) => console.error("Email send failed:", err));
       }
 
       return NextResponse.json({ success: true });
