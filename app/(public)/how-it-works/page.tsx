@@ -307,7 +307,7 @@ export default function HowItWorksPage() {
               {industries.map((ind, i) => (
                 <FadeIn key={ind.slug} delay={i * 0.1}>
                   <Link
-                    href={`/industries/${ind.slug}`}
+                    href={`/${ind.slug}`}
                     className="group flex flex-col items-center rounded-2xl bg-white p-8 text-center shadow-md transition-shadow hover:shadow-lg"
                   >
                     <span className="flex h-14 w-14 items-center justify-center rounded-lg bg-[#0D9488]">

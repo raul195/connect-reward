@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ChevronDown } from "lucide-react";
+import { INDUSTRY_NAV_LIST } from "@/lib/industry-pages";
 
 export function Navbar() {
   return (
@@ -21,6 +22,28 @@ export function Navbar() {
           >
             How It Works
           </Link>
+
+          {/* Industries dropdown */}
+          <div className="relative hidden sm:block group">
+            <span className="flex cursor-default items-center gap-1 text-sm font-medium text-[#64748B] transition-colors group-hover:text-[#1A202C]">
+              Industries
+              <ChevronDown className="h-3.5 w-3.5" />
+            </span>
+            <div className="invisible absolute left-1/2 top-full z-50 -translate-x-1/2 pt-3 opacity-0 transition-all duration-150 group-hover:visible group-hover:opacity-100">
+              <div className="w-52 rounded-lg border border-gray-100 bg-white py-2 shadow-lg">
+                {INDUSTRY_NAV_LIST.map((ind) => (
+                  <Link
+                    key={ind.slug}
+                    href={`/${ind.slug}`}
+                    className="block px-4 py-2 text-sm text-[#64748B] transition-colors hover:bg-[#F8FAFC] hover:text-[#1A202C]"
+                  >
+                    {ind.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <Link
             href="/faq"
             className="hidden text-sm font-medium text-[#64748B] transition-colors hover:text-[#1A202C] sm:inline-block"
