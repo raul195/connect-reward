@@ -16,6 +16,18 @@ export function Navbar() {
 
         <div className="flex items-center gap-3">
           <Link
+            href="/how-it-works"
+            className="hidden text-sm font-medium text-[#64748B] transition-colors hover:text-[#1A202C] sm:inline-block"
+          >
+            How It Works
+          </Link>
+          <Link
+            href="/faq"
+            className="hidden text-sm font-medium text-[#64748B] transition-colors hover:text-[#1A202C] sm:inline-block"
+          >
+            FAQ
+          </Link>
+          <Link
             href="/login"
             className="hidden text-sm font-medium text-[#64748B] transition-colors hover:text-[#1A202C] sm:inline-block"
           >
