@@ -206,7 +206,6 @@ export default function RewardsCatalog() {
           <p className="mt-3 text-2xl font-extrabold text-amber-600">
             {reward.points_required.toLocaleString()} <span className="text-sm font-medium">pts</span>
           </p>
-          <p className="text-xs text-muted-foreground">= ${(reward.points_required / 100).toFixed(2)}</p>
           {reward.quantity_available !== null && (
             <Badge variant="outline" className="mt-1 w-fit text-xs">{reward.quantity_available} left</Badge>
           )}
@@ -243,7 +242,6 @@ export default function RewardsCatalog() {
         <h1 className="text-2xl font-bold tracking-tight">Rewards</h1>
         <p className="text-muted-foreground">
           Your balance: <span className="font-bold text-foreground">{userPoints.toLocaleString()} pts</span>
-          <span className="text-xs ml-1">(${(userPoints / 100).toFixed(2)})</span>
         </p>
       </div>
 

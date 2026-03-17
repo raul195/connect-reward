@@ -375,10 +375,7 @@ export default function RewardsManagement() {
                   <h3 className="mt-3 font-bold">{r.name}</h3>
                   {r.description && <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{r.description}</p>}
                   <div className="mt-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-xl font-extrabold text-amber-600">{r.points_required.toLocaleString()} pts</p>
-                      <p className="text-xs text-muted-foreground">= ${(r.points_required / 100).toFixed(2)}</p>
-                    </div>
+                    <p className="text-xl font-extrabold text-amber-600">{r.points_required.toLocaleString()} pts</p>
                     <Badge variant="outline">{CATEGORIES.find(c => c.value === r.category)?.label ?? r.category}</Badge>
                   </div>
                   {r.quantity_available !== null && (
