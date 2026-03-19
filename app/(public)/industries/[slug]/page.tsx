@@ -80,10 +80,10 @@ export default async function IndustryPage({
             </p>
             <div className="mt-8">
               <Link
-                href="/early-access"
+                href="/signup"
                 className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#0D9488] to-[#0F766E] px-8 py-3.5 text-base font-semibold text-white shadow-md transition-all hover:brightness-110"
               >
-                Request Early Access
+                Get Started Free
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
@@ -151,10 +151,10 @@ export default async function IndustryPage({
             </p>
             <div className="mt-8">
               <Link
-                href="/early-access"
+                href="/signup"
                 className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#0D9488] to-[#0F766E] px-8 py-3.5 text-base font-semibold text-white shadow-md transition-all hover:brightness-110"
               >
-                Apply for Early Access
+                Get Started Free
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

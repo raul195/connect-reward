@@ -18,7 +18,7 @@ const faqs = [
   {
     question: "What does it cost?",
     answer:
-      "Connect Reward offers a Free plan and a Beta plan at $99/month. We're currently in early access — request access to lock in early adopter rates.",
+      "Connect Reward offers a Free plan and a Starter plan at $99/month. Sign up free — no credit card required to get started.",
   },
   {
     question: "What industries does Connect Reward support?",

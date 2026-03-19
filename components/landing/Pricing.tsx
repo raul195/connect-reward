@@ -28,7 +28,7 @@ const plans: PricingPlan[] = [
       "Community support",
     ],
     cta: "Get Started Free",
-    href: "/early-access?plan=free",
+    href: "/signup",
   },
   {
     name: "Starter",
@@ -46,7 +46,7 @@ const plans: PricingPlan[] = [
     ],
     cta: "Get Started",
     highlighted: true,
-    href: "/early-access?plan=starter",
+    href: "/signup",
   },
 ];
 
@@ -56,7 +56,7 @@ export function Pricing() {
       <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <FadeIn className="text-center">
           <p className="mb-3 text-sm font-semibold text-[#0D9488]">
-            Now accepting early access applications
+            No credit card required to start
           </p>
           <h2 className="text-3xl font-extrabold text-[#1A202C] sm:text-4xl">
             Simple, Transparent Pricing

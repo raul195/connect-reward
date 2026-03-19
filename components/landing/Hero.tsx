@@ -74,10 +74,10 @@ export function Hero() {
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/early-access"
+                href="/signup"
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#0D9488] to-[#0F766E] px-6 py-3 text-base font-semibold text-white shadow-md transition-all hover:brightness-110"
               >
-                Request Early Access
+                Get Started Free
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
@@ -95,7 +95,7 @@ export function Hero() {
               </span>
               <span className="flex items-center gap-1.5">
                 <Check className="h-4 w-4 text-[#0D9488]" />
-                Limited spots available
+                Set up in under 15 minutes
               </span>
             </div>
           </FadeIn>

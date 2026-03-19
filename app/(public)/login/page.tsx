@@ -106,12 +106,12 @@ function LoginForm() {
             {loading ? "Signing in..." : "Sign In"}
           </Button>
           <p className="text-sm text-muted-foreground">
-            Want to get started?{" "}
+            Don&apos;t have an account?{" "}
             <Link
-              href="/#early-access"
+              href="/signup"
               className="text-primary underline-offset-4 hover:underline"
             >
-              Request early access
+              Sign up free
             </Link>
           </p>
         </CardFooter>

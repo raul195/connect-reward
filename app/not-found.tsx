@@ -24,10 +24,10 @@ export default function NotFound() {
               Go Home
             </Link>
             <Link
-              href="/early-access"
+              href="/signup"
               className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-[#1A202C] shadow-sm transition-colors hover:bg-gray-50"
             >
-              Request Access
+              Sign Up Free
             </Link>
           </div>
         </div>

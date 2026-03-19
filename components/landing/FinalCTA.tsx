@@ -13,14 +13,14 @@ export function FinalCTA() {
             Ready to Grow Your Business?
           </h2>
           <p className="mt-4 text-lg text-[#64748B]">
-            Be one of the first businesses to transform your referral program. Limited early access spots available.
+            Start free today and see how a gamified referral program transforms your business.
           </p>
           <div className="mt-8">
             <Link
-              href="/early-access"
+              href="/signup"
               className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#0D9488] to-[#0F766E] px-8 py-3.5 text-base font-semibold text-white shadow-md transition-all hover:brightness-110"
             >
-              Apply for Early Access
+              Get Started Free
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>

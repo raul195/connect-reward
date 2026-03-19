@@ -131,23 +131,6 @@ export default function ApplicationsPage() {
     setStatusCounts(prev => ({ ...prev })); // trigger re-render
     toast.success(`Status updated to ${status.replace("_", " ")}`);
 
-    // If approved, trigger invite email
-    if (status === "approved") {
-      const app = applications.find(a => a.id === id);
-      if (app) {
-        try {
-          await fetch("/api/early-access/approve", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: app.email, full_name: app.full_name }),
-          });
-          toast.success("Approval email sent!");
-        } catch {
-          toast.error("Failed to send approval email.");
-        }
-      }
-    }
-
     fetchStats();
   }
 

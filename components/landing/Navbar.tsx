@@ -87,20 +87,20 @@ export function Navbar() {
             Log in
           </Link>
           <Link
-            href="/early-access"
+            href="/signup"
             className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#0D9488] to-[#0F766E] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110"
           >
-            Request Access
+            Sign Up Free
           </Link>
         </div>
 
         {/* Mobile nav toggle + CTA */}
         <div className="flex items-center gap-2 sm:hidden">
           <Link
-            href="/early-access"
+            href="/signup"
             className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#0D9488] to-[#0F766E] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110"
           >
-            Request Access
+            Sign Up Free
           </Link>
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
