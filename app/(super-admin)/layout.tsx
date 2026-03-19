@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Sidebar, type NavItem } from "@/components/shared/Sidebar";
 import { Header } from "@/components/shared/Header";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
-import { DemoModeBanner } from "@/components/shared/DemoModeBanner";
 import { useProfile } from "@/hooks/useProfile";
 
 const superAdminNav: NavItem[] = [
@@ -86,7 +85,6 @@ export default function SuperAdminLayout({
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <DemoModeBanner />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar navItems={superAdminNav} brandLabel="CR Admin" />
         <div className="flex flex-1 flex-col overflow-hidden">
