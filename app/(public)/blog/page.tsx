@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { getAllPosts } from "@/lib/blog";
 import { Navbar } from "@/components/landing/Navbar";
 import { Footer } from "@/components/landing/Footer";
-import { ArrowRight, Clock, Calendar } from "lucide-react";
+import { Clock, Calendar } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Blog — Connect Reward",
@@ -18,8 +18,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function BlogIndex() {
-  const posts = getAllPosts();
+export default async function BlogIndex() {
+  const posts = await getAllPosts();
 
   return (
     <div className="flex min-h-screen flex-col">

@@ -5,7 +5,7 @@ import { getAllPosts } from '@/lib/blog'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://connectreward.io'
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Old /industries/[slug] pages
   const oldIndustryPages: MetadataRoute.Sitemap = INDUSTRIES.map((i) => ({
     url: `${BASE_URL}/industries/${i.slug}`,
@@ -23,7 +23,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }))
 
   // Blog posts
-  const blogPosts: MetadataRoute.Sitemap = getAllPosts().map((p) => ({
+  const posts = await getAllPosts()
+  const blogPosts: MetadataRoute.Sitemap = posts.map((p) => ({
     url: `${BASE_URL}/blog/${p.slug}`,
     lastModified: new Date(p.date),
     changeFrequency: 'monthly' as const,

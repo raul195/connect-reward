@@ -140,6 +140,22 @@ export interface PointTransaction {
   created_at: string;
 }
 
+export interface BlogPost {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  content: string;
+  author: string;
+  category: string;
+  tags: string[];
+  image: string | null;
+  published: boolean;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface CustomerFavorite {
   id: string;
   customer_id: string;
