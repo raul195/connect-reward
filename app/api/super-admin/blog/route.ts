@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     if (forbidden) return forbidden;
 
     const body = await request.json();
-    const { title, slug, description, content, author, category, tags, image, published } = body;
+    const { title, slug, description, content, author, category, tags, image, published, scheduled_at } = body;
 
     if (!title || !slug) {
       return NextResponse.json({ error: "Title and slug are required" }, { status: 400 });
@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
         image: image || null,
         published: published || false,
         published_at: published ? new Date().toISOString() : null,
+        scheduled_at: scheduled_at || null,
       })
       .select()
       .single();

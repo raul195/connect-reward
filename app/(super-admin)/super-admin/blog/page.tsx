@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import type { BlogPost } from "@/lib/types";
 
+type PublishMode = "draft" | "now" | "schedule";
+
 interface PostForm {
   title: string;
   slug: string;
@@ -26,13 +28,16 @@ interface PostForm {
   category: string;
   tags: string;
   image: string;
-  published: boolean;
+  publishMode: PublishMode;
+  scheduledDate: string;
+  scheduledTime: string;
 }
 
 const emptyForm: PostForm = {
   title: "", slug: "", description: "", content: "",
   author: "Connect Reward Team", category: "Getting Started",
-  tags: "", image: "", published: false,
+  tags: "", image: "", publishMode: "draft",
+  scheduledDate: "", scheduledTime: "09:00",
 };
 
 function slugify(text: string): string {
@@ -73,6 +78,17 @@ export default function BlogManager() {
 
   function openEdit(post: BlogPost) {
     setEditing(post.id);
+    let publishMode: PublishMode = "draft";
+    let scheduledDate = "";
+    let scheduledTime = "09:00";
+    if (post.published) {
+      publishMode = "now";
+    } else if (post.scheduled_at) {
+      publishMode = "schedule";
+      const d = new Date(post.scheduled_at);
+      scheduledDate = d.toISOString().split("T")[0];
+      scheduledTime = d.toTimeString().slice(0, 5);
+    }
     setForm({
       title: post.title,
       slug: post.slug,
@@ -82,7 +98,9 @@ export default function BlogManager() {
       category: post.category,
       tags: (post.tags || []).join(", "),
       image: post.image || "",
-      published: post.published,
+      publishMode,
+      scheduledDate,
+      scheduledTime,
     });
     setModalOpen(true);
   }
@@ -94,6 +112,16 @@ export default function BlogManager() {
     }
     setSaving(true);
 
+    let scheduled_at: string | null = null;
+    if (form.publishMode === "schedule") {
+      if (!form.scheduledDate) {
+        toast.error("Please select a date to schedule.");
+        setSaving(false);
+        return;
+      }
+      scheduled_at = new Date(`${form.scheduledDate}T${form.scheduledTime || "09:00"}`).toISOString();
+    }
+
     const payload = {
       title: form.title,
       slug: slugify(form.slug),
@@ -103,7 +131,8 @@ export default function BlogManager() {
       category: form.category,
       tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
       image: form.image || null,
-      published: form.published,
+      published: form.publishMode === "now",
+      scheduled_at,
     };
 
     try {
@@ -172,7 +201,8 @@ export default function BlogManager() {
   }
 
   const published = posts.filter((p) => p.published);
-  const drafts = posts.filter((p) => !p.published);
+  const scheduled = posts.filter((p) => !p.published && p.scheduled_at);
+  const drafts = posts.filter((p) => !p.published && !p.scheduled_at);
 
   return (
     <div className="space-y-6">
@@ -180,7 +210,7 @@ export default function BlogManager() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Blog Manager</h1>
           <p className="text-muted-foreground">
-            {published.length} published, {drafts.length} drafts
+            {published.length} published{scheduled.length > 0 ? `, ${scheduled.length} scheduled` : ""}, {drafts.length} drafts
           </p>
         </div>
         <Button onClick={openNew} className="bg-teal-600 hover:bg-teal-700">
@@ -203,19 +233,25 @@ export default function BlogManager() {
                     <h3 className="font-bold truncate">{post.title}</h3>
                     <Badge
                       variant="outline"
-                      className={post.published
-                        ? "border-green-300 bg-green-50 text-green-700 shrink-0"
-                        : "border-amber-300 bg-amber-50 text-amber-700 shrink-0"
+                      className={
+                        post.published
+                          ? "border-green-300 bg-green-50 text-green-700 shrink-0"
+                          : post.scheduled_at
+                          ? "border-blue-300 bg-blue-50 text-blue-700 shrink-0"
+                          : "border-amber-300 bg-amber-50 text-amber-700 shrink-0"
                       }
                     >
-                      {post.published ? <Eye className="mr-1 h-3 w-3" /> : <EyeOff className="mr-1 h-3 w-3" />}
-                      {post.published ? "Published" : "Draft"}
+                      {post.published ? <Eye className="mr-1 h-3 w-3" /> : post.scheduled_at ? <Clock className="mr-1 h-3 w-3" /> : <EyeOff className="mr-1 h-3 w-3" />}
+                      {post.published ? "Published" : post.scheduled_at ? "Scheduled" : "Draft"}
                     </Badge>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground truncate">
                     /blog/{post.slug} &middot; {post.category}
                     {post.published_at && (
-                      <> &middot; {new Date(post.published_at).toLocaleDateString()}</>
+                      <> &middot; Published {new Date(post.published_at).toLocaleDateString()}</>
+                    )}
+                    {!post.published && post.scheduled_at && (
+                      <> &middot; Scheduled for {new Date(post.scheduled_at).toLocaleString()}</>
                     )}
                   </p>
                 </div>
@@ -329,12 +365,58 @@ export default function BlogManager() {
               />
             </div>
 
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={form.published}
-                onCheckedChange={(v) => setForm((f) => ({ ...f, published: v }))}
-              />
-              <Label>Publish immediately</Label>
+            <div className="space-y-3">
+              <Label>Publishing</Label>
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio" name="publishMode" value="draft"
+                    checked={form.publishMode === "draft"}
+                    onChange={() => setForm((f) => ({ ...f, publishMode: "draft" }))}
+                    className="accent-[#0D9488]"
+                  />
+                  <span className="text-sm">Save as draft</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio" name="publishMode" value="now"
+                    checked={form.publishMode === "now"}
+                    onChange={() => setForm((f) => ({ ...f, publishMode: "now" }))}
+                    className="accent-[#0D9488]"
+                  />
+                  <span className="text-sm">Publish immediately</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio" name="publishMode" value="schedule"
+                    checked={form.publishMode === "schedule"}
+                    onChange={() => setForm((f) => ({ ...f, publishMode: "schedule" }))}
+                    className="accent-[#0D9488]"
+                  />
+                  <span className="text-sm">Schedule for later</span>
+                </label>
+              </div>
+              {form.publishMode === "schedule" && (
+                <div className="flex gap-3 mt-2">
+                  <div className="space-y-1 flex-1">
+                    <Label className="text-xs">Date</Label>
+                    <Input
+                      type="date"
+                      value={form.scheduledDate}
+                      onChange={(e) => setForm((f) => ({ ...f, scheduledDate: e.target.value }))}
+                      min={new Date().toISOString().split("T")[0]}
+                    />
+                  </div>
+                  <div className="space-y-1 w-32">
+                    <Label className="text-xs">Time</Label>
+                    <Input
+                      type="time"
+                      value={form.scheduledTime}
+                      onChange={(e) => setForm((f) => ({ ...f, scheduledTime: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

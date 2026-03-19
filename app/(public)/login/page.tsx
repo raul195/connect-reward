@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { toast } from "sonner";
 
 function LoginForm() {
   const router = useRouter();
@@ -25,6 +26,9 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -63,6 +67,92 @@ function LoginForm() {
     router.refresh();
   }
 
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) {
+      setError("Please enter your email address.");
+      return;
+    }
+    setError(null);
+    setResetLoading(true);
+
+    const supabase = createClient();
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email,
+      { redirectTo: `${window.location.origin}/login` }
+    );
+
+    if (resetError) {
+      setError(resetError.message);
+      setResetLoading(false);
+      return;
+    }
+
+    setResetSent(true);
+    setResetLoading(false);
+    toast.success("Password reset email sent!");
+  }
+
+  if (resetMode) {
+    return (
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
+          <CardDescription>
+            Enter your email and we&apos;ll send you a reset link
+          </CardDescription>
+        </CardHeader>
+        {resetSent ? (
+          <CardContent className="space-y-4 text-center">
+            <div className="rounded-md bg-green-50 p-4 text-sm text-green-700">
+              Check your email for a password reset link. It may take a minute to arrive.
+            </div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => { setResetMode(false); setResetSent(false); }}
+            >
+              Back to Sign In
+            </Button>
+          </CardContent>
+        ) : (
+          <form onSubmit={handleResetPassword}>
+            <CardContent className="space-y-4">
+              {error && (
+                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  {error}
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="reset-email">Email</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-3">
+              <Button type="submit" className="w-full" disabled={resetLoading}>
+                {resetLoading ? "Sending..." : "Send Reset Link"}
+              </Button>
+              <button
+                type="button"
+                onClick={() => { setResetMode(false); setError(null); }}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Back to Sign In
+              </button>
+            </CardFooter>
+          </form>
+        )}
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
@@ -90,7 +180,16 @@ function LoginForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <button
+                type="button"
+                onClick={() => { setResetMode(true); setError(null); }}
+                className="text-xs text-primary hover:underline underline-offset-4"
+              >
+                Forgot password?
+              </button>
+            </div>
             <Input
               id="password"
               type="password"
