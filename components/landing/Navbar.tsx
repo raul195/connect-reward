@@ -81,6 +81,12 @@ export function Navbar() {
             FAQ
           </Link>
           <Link
+            href="/blog"
+            className="text-sm font-medium text-[#64748B] transition-colors hover:text-[#1A202C]"
+          >
+            Blog
+          </Link>
+          <Link
             href="/login"
             className="text-sm font-medium text-[#64748B] transition-colors hover:text-[#1A202C]"
           >
@@ -129,6 +135,13 @@ export function Navbar() {
               className="rounded-lg px-3 py-2.5 text-sm font-medium text-[#64748B] transition-colors hover:bg-[#F8FAFC] hover:text-[#1A202C]"
             >
               FAQ
+            </Link>
+            <Link
+              href="/blog"
+              onClick={() => setMobileOpen(false)}
+              className="rounded-lg px-3 py-2.5 text-sm font-medium text-[#64748B] transition-colors hover:bg-[#F8FAFC] hover:text-[#1A202C]"
+            >
+              Blog
             </Link>
             <Link
               href="/login"
