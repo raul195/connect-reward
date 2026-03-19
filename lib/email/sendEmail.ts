@@ -57,6 +57,10 @@ import {
   getRedemptionRequestedSubject,
 } from "./templates/RedemptionRequestedEmail";
 import {
+  BusinessWelcomeEmail,
+  getBusinessWelcomeSubject,
+} from "./templates/BusinessWelcomeEmail";
+import {
   RedemptionFulfilledEmail,
   getRedemptionFulfilledSubject,
 } from "./templates/RedemptionFulfilledEmail";
@@ -174,6 +178,11 @@ interface TemplateMap {
     adminName: string;
     dashboardUrl: string;
   } & BrandingProps;
+  business_welcome: {
+    ownerName: string;
+    businessName: string;
+    dashboardUrl: string;
+  } & BrandingProps;
   redemption_requested: {
     customerName: string;
     rewardName: string;
@@ -214,6 +223,7 @@ const PREF_KEY_MAP: Record<TemplateName, keyof NotificationPreferences | null> =
     promotion_last_chance: null,
     ticket_resolved: null, // transactional
     feedback_request: null, // transactional, always send
+    business_welcome: null, // transactional, always send
     redemption_requested: null, // transactional, always send to business
     redemption_fulfilled: "reward_fulfilled",
     redemption_rejected: null, // transactional, always send
@@ -322,6 +332,13 @@ function renderTemplate<T extends TemplateName>(
       return {
         element: React.createElement(FeedbackEmail, p),
         subject: getFeedbackSubject(),
+      };
+    }
+    case "business_welcome": {
+      const p = props as TemplateMap["business_welcome"];
+      return {
+        element: React.createElement(BusinessWelcomeEmail, p),
+        subject: getBusinessWelcomeSubject(),
       };
     }
     case "redemption_requested": {

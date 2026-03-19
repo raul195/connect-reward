@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/api-helpers";
 import { isDemoAccount } from "@/lib/demo";
+import { sendTransactionalEmail } from "@/lib/email/sendEmail";
+import { Resend } from "resend";
 
 export async function GET() {
   const result = await getAuthContext();
@@ -119,6 +121,38 @@ export async function POST(request: NextRequest) {
       tone_preference: "friendly",
     });
     if (settingsError) console.error("Automation settings seed failed:", settingsError.message);
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io";
+
+    // Send welcome email to the new business owner
+    sendTransactionalEmail({
+      template: "business_welcome",
+      to: profile.email,
+      props: {
+        ownerName: profile.full_name || "there",
+        businessName: name,
+        dashboardUrl: `${baseUrl}/admin`,
+        companyName: "Connect Reward",
+        logoUrl: null,
+        primaryColor: "#0D9488",
+      },
+      companyId: company.id,
+      customerId: profile.id,
+      preferences: null,
+      adminClient: admin,
+    }).catch((err) => console.error("Welcome email failed:", err));
+
+    // Notify super admin about the new signup
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (adminEmail) {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      resend.emails.send({
+        from: "Connect Reward <notifications@connectreward.io>",
+        to: adminEmail,
+        subject: `New Business Signup: ${name}`,
+        text: `A new business just signed up for Connect Reward!\n\nBusiness: ${name}\nOwner: ${profile.full_name || "Unknown"}\nEmail: ${profile.email}\nPlan: Free\nTime: ${new Date().toLocaleString()}\n\nLog in to your super-admin dashboard to view: ${baseUrl}/super-admin`,
+      }).catch((err) => console.error("Admin notification email failed:", err));
+    }
 
     return NextResponse.json({ company }, { status: 201 });
   } catch (error) {
