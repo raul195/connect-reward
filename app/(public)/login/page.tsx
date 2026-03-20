@@ -55,16 +55,16 @@ function LoginForm() {
     if (user) {
       const role = user.user_metadata?.role as string | undefined;
 
+      // Use full page navigation to ensure session cookies propagate
       if (role === "business" || role === "business_owner") {
-        router.push("/admin");
+        window.location.href = "/admin";
       } else if (role === "super_admin") {
-        router.push("/super-admin");
+        window.location.href = "/super-admin";
       } else {
-        router.push(redirect);
+        window.location.href = redirect;
       }
+      return;
     }
-
-    router.refresh();
   }
 
   async function handleResetPassword(e: React.FormEvent) {

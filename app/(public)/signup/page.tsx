@@ -64,9 +64,9 @@ export default function SignupPage() {
         return;
       }
 
-      // 3. Redirect to admin (onboarding will kick in)
-      router.push("/admin");
-      router.refresh();
+      // 3. Redirect to onboarding — use full page navigation to ensure
+      //    session cookies are sent with the request (router.push can race)
+      window.location.href = "/admin/onboarding";
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);
