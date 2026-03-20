@@ -295,7 +295,7 @@ export default function OnboardingPage() {
   }
 
   function getRewardPoints(svc: ServiceEntry) {
-    return getRewardDollars(svc) * 100;
+    return Math.round(getRewardDollars(svc) * 100);
   }
 
   // ── Submit ──
