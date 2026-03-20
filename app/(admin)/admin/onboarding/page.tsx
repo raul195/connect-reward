@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Sun, Home, Wind, Bug, SquareStack, HelpCircle, Plus, X, ArrowRight, ArrowLeft, Check, Loader2, CreditCard, Shield } from "lucide-react";
 import { loadStripe } from "@stripe/stripe-js";
@@ -691,6 +691,165 @@ function StepServices({
   );
 }
 
+function ServiceRewardCard({
+  svc,
+  onUpdateService,
+  getProfit,
+  getRewardDollars,
+  getRewardPoints,
+}: {
+  svc: ServiceEntry;
+  onUpdateService: (id: string, field: keyof ServiceEntry, value: string | number) => void;
+  getProfit: (s: ServiceEntry) => number;
+  getRewardDollars: (s: ServiceEntry) => number;
+  getRewardPoints: (s: ServiceEntry) => number;
+}) {
+  const profit = getProfit(svc);
+  const rewardDollars = getRewardDollars(svc);
+  const rewardPoints = getRewardPoints(svc);
+  const marginRange = MARGIN_RANGES[svc.industry] || MARGIN_RANGES.other;
+  const isHighReward = svc.referral_percentage > 25;
+
+  // Local string state for dollar inputs — allows free typing
+  const [profitInput, setProfitInput] = useState(String(Math.round(profit) || ""));
+  const [rewardInput, setRewardInput] = useState(String(rewardDollars || ""));
+
+  // Sync local inputs when the underlying percentage changes (e.g. slider drag)
+  const profitRef = useRef(profit);
+  const rewardRef = useRef(rewardDollars);
+  if (Math.round(profit) !== Math.round(profitRef.current)) {
+    profitRef.current = profit;
+    setProfitInput(String(Math.round(profit) || ""));
+  }
+  if (rewardDollars !== rewardRef.current) {
+    rewardRef.current = rewardDollars;
+    setRewardInput(String(rewardDollars || ""));
+  }
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-5">
+      <div className="flex items-center justify-between">
+        <p className="font-semibold text-[#1A202C]">{svc.name}</p>
+        <p className="text-sm text-[#64748B]">Job: ${svc.job_value.toLocaleString()}</p>
+      </div>
+
+      {/* Margin input */}
+      <div className="mt-4">
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-[#475569]">
+            Profit margin
+          </label>
+          <div className="group relative">
+            <HelpCircle className="h-3.5 w-3.5 text-[#94A3B8] cursor-help" />
+            <div className="invisible group-hover:visible absolute left-0 top-6 z-10 w-72 rounded-lg border bg-white p-3 text-xs text-[#64748B] shadow-lg">
+              Your margin is your profit after labor, materials, and overhead costs.
+              For example, if a $10,000 job costs you $6,000 to deliver, your margin is 40%.
+              <p className="mt-2 font-medium text-[#475569]">{marginRange.label}</p>
+            </div>
+          </div>
+        </div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-3">
+          <div className="relative w-24">
+            <Input
+              type="number"
+              value={svc.margin || ""}
+              onChange={(e) => {
+                const v = Math.min(100, Math.max(0, Number(e.target.value)));
+                onUpdateService(svc.id, "margin", v);
+              }}
+              className="pr-7"
+              min={1}
+              max={100}
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
+          </div>
+          <span className="text-sm text-[#64748B]">or</span>
+          <div className="relative w-28">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+            <Input
+              type="text"
+              inputMode="numeric"
+              placeholder="Profit $"
+              value={profitInput}
+              onChange={(e) => setProfitInput(e.target.value)}
+              onBlur={() => {
+                const dollars = Number(profitInput);
+                if (svc.job_value > 0 && dollars > 0) {
+                  const pct = Math.min(100, Math.max(1, Math.round((dollars / svc.job_value) * 100)));
+                  onUpdateService(svc.id, "margin", pct);
+                }
+              }}
+              className="pl-7"
+            />
+          </div>
+          <span className="text-sm text-[#64748B]">profit per job</span>
+        </div>
+        <p className="mt-1 text-xs text-[#94A3B8]">
+          {marginRange.label}
+        </p>
+      </div>
+
+      {/* Referral reward slider (% of profit) */}
+      <div className="mt-5">
+        <label className="text-sm font-medium text-[#475569]">
+          Referral reward (% of profit)
+        </label>
+        <div className="mt-2 flex items-center gap-4">
+          <span className="w-12 text-right text-sm font-bold text-[#0D9488]">
+            {svc.referral_percentage}%
+          </span>
+          <Slider
+            value={[svc.referral_percentage]}
+            onValueChange={([v]) => onUpdateService(svc.id, "referral_percentage", v)}
+            min={1}
+            max={30}
+            step={1}
+            className="flex-1"
+          />
+        </div>
+      </div>
+
+      {/* Referral cost dollar input */}
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <label className="text-sm font-medium text-[#475569]">
+          Reward per referral:
+        </label>
+        <div className="relative w-28">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+          <Input
+            type="text"
+            inputMode="numeric"
+            value={rewardInput}
+            onChange={(e) => setRewardInput(e.target.value)}
+            onBlur={() => {
+              const dollars = Number(rewardInput);
+              if (profit > 0 && dollars > 0) {
+                const pct = Math.min(30, Math.max(1, Math.round((dollars / profit) * 100)));
+                onUpdateService(svc.id, "referral_percentage", pct);
+              }
+            }}
+            className="pl-7"
+          />
+        </div>
+        <span className="text-sm text-[#64748B]">=</span>
+        <span className="rounded bg-amber-50 px-2 py-1 text-sm font-medium text-amber-600">
+          {rewardPoints.toLocaleString()} points
+        </span>
+      </div>
+
+      {/* Profitability guardrail */}
+      {isHighReward && (
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+          <span className="text-amber-500">⚠️</span>
+          <p className="text-xs text-amber-700">
+            This reward is quite high relative to your margin. Make sure this works for your business.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StepRewards({
   services,
   onUpdateService,
@@ -716,132 +875,16 @@ function StepRewards({
       </p>
 
       <div className="mt-8 space-y-6">
-        {services.map((svc) => {
-          const profit = getProfit(svc);
-          const rewardDollars = getRewardDollars(svc);
-          const rewardPoints = getRewardPoints(svc);
-          const marginRange = MARGIN_RANGES[svc.industry] || MARGIN_RANGES.other;
-          const isHighReward = svc.referral_percentage > 25;
-
-          return (
-            <div key={svc.id} className="rounded-xl border border-gray-200 bg-white p-5">
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-[#1A202C]">{svc.name}</p>
-                <p className="text-sm text-[#64748B]">Job: ${svc.job_value.toLocaleString()}</p>
-              </div>
-
-              {/* Margin input */}
-              <div className="mt-4">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-[#475569]">
-                    Profit margin
-                  </label>
-                  <div className="group relative">
-                    <HelpCircle className="h-3.5 w-3.5 text-[#94A3B8] cursor-help" />
-                    <div className="invisible group-hover:visible absolute left-0 top-6 z-10 w-72 rounded-lg border bg-white p-3 text-xs text-[#64748B] shadow-lg">
-                      Your margin is your profit after labor, materials, and overhead costs.
-                      For example, if a $10,000 job costs you $6,000 to deliver, your margin is 40%.
-                      <p className="mt-2 font-medium text-[#475569]">{marginRange.label}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-3">
-                  <div className="relative w-24">
-                    <Input
-                      type="number"
-                      value={svc.margin || ""}
-                      onChange={(e) => {
-                        const v = Math.min(100, Math.max(0, Number(e.target.value)));
-                        onUpdateService(svc.id, "margin", v);
-                      }}
-                      className="pr-7"
-                      min={1}
-                      max={100}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
-                  </div>
-                  <span className="text-sm text-[#64748B]">or</span>
-                  <div className="relative w-28">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input
-                      type="number"
-                      placeholder="Profit $"
-                      value={Math.round(profit) || ""}
-                      onChange={(e) => {
-                        const profitDollars = Number(e.target.value);
-                        if (svc.job_value > 0) {
-                          const pct = Math.min(100, Math.max(0, Math.round((profitDollars / svc.job_value) * 100)));
-                          onUpdateService(svc.id, "margin", pct);
-                        }
-                      }}
-                      className="pl-7"
-                    />
-                  </div>
-                  <span className="text-sm text-[#64748B]">profit per job</span>
-                </div>
-                <p className="mt-1 text-xs text-[#94A3B8]">
-                  {marginRange.label}
-                </p>
-              </div>
-
-              {/* Referral reward slider (% of profit) */}
-              <div className="mt-5">
-                <label className="text-sm font-medium text-[#475569]">
-                  Referral reward (% of profit)
-                </label>
-                <div className="mt-2 flex items-center gap-4">
-                  <span className="w-12 text-right text-sm font-bold text-[#0D9488]">
-                    {svc.referral_percentage}%
-                  </span>
-                  <Slider
-                    value={[svc.referral_percentage]}
-                    onValueChange={([v]) => onUpdateService(svc.id, "referral_percentage", v)}
-                    min={1}
-                    max={30}
-                    step={1}
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-
-              {/* Referral cost dollar input */}
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <label className="text-sm font-medium text-[#475569]">
-                  Reward per referral:
-                </label>
-                <div className="relative w-28">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                  <Input
-                    type="number"
-                    value={rewardDollars || ""}
-                    onChange={(e) => {
-                      const dollars = Number(e.target.value);
-                      if (profit > 0) {
-                        const pct = Math.min(30, Math.max(1, Math.round((dollars / profit) * 100)));
-                        onUpdateService(svc.id, "referral_percentage", pct);
-                      }
-                    }}
-                    className="pl-7"
-                  />
-                </div>
-                <span className="text-sm text-[#64748B]">=</span>
-                <span className="rounded bg-amber-50 px-2 py-1 text-sm font-medium text-amber-600">
-                  {rewardPoints.toLocaleString()} points
-                </span>
-              </div>
-
-              {/* Profitability guardrail */}
-              {isHighReward && (
-                <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                  <span className="text-amber-500">⚠️</span>
-                  <p className="text-xs text-amber-700">
-                    This reward is quite high relative to your margin. Make sure this works for your business.
-                  </p>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {services.map((svc) => (
+          <ServiceRewardCard
+            key={svc.id}
+            svc={svc}
+            onUpdateService={onUpdateService}
+            getProfit={getProfit}
+            getRewardDollars={getRewardDollars}
+            getRewardPoints={getRewardPoints}
+          />
+        ))}
       </div>
 
       <p className="mt-6 text-sm text-[#64748B]">
