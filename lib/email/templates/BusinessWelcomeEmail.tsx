@@ -86,8 +86,11 @@ export function BusinessWelcomeEmail({
       <Hr style={dividerStyle} />
 
       <Text style={footerNoteStyle}>
-        Have questions? Just reply to this email — we read every message and
-        we&apos;re here to help you succeed.
+        Have questions? Reach out to us at{" "}
+        <a href="mailto:support@connectreward.io" style={{ color: "#0D9488" }}>
+          support@connectreward.io
+        </a>{" "}
+        — we&apos;re here to help you succeed.
       </Text>
 
       <Text style={signoffStyle}>

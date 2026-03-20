@@ -161,7 +161,7 @@ export default function OnboardingPage() {
       if (!res.ok) return;
       const { data } = await res.json();
       if (data?.onboarding_completed) {
-        router.replace("/admin");
+        window.location.href = "/admin";
         return;
       }
       if (data?.plan_tier) {
@@ -332,7 +332,8 @@ export default function OnboardingPage() {
       }
 
       toast.success("Your program is live!");
-      router.replace("/admin");
+      // Use full page navigation to ensure company cache is refreshed
+      window.location.href = "/admin";
     } catch {
       toast.error("Something went wrong");
       setSaving(false);
@@ -644,15 +645,20 @@ function StepServices({
                       onChange={(e) => onUpdateService(svc.id, "name", e.target.value)}
                       className="flex-1"
                     />
-                    <div className="relative w-36">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                      <Input
-                        type="number"
-                        placeholder="Job value"
-                        value={svc.job_value || ""}
-                        onChange={(e) => onUpdateService(svc.id, "job_value", Number(e.target.value))}
-                        className="pl-7"
-                      />
+                    <div className="w-40">
+                      <label className="block text-xs font-medium text-[#475569] mb-1">
+                        Job value ($)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={svc.job_value || ""}
+                          onChange={(e) => onUpdateService(svc.id, "job_value", Number(e.target.value))}
+                          className="pl-7"
+                        />
+                      </div>
                     </div>
                     <button
                       onClick={() => onRemoveService(svc.id)}
@@ -739,7 +745,7 @@ function StepRewards({
                     </div>
                   </div>
                 </div>
-                <div className="mt-1.5 flex items-center gap-3">
+                <div className="mt-1.5 flex flex-wrap items-center gap-3">
                   <div className="relative w-24">
                     <Input
                       type="number"
@@ -754,9 +760,24 @@ function StepRewards({
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
                   </div>
-                  <span className="text-sm text-[#64748B]">
-                    = <span className="font-medium text-[#1A202C]">${Math.round(profit).toLocaleString()}</span> profit per job
-                  </span>
+                  <span className="text-sm text-[#64748B]">or</span>
+                  <div className="relative w-28">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <Input
+                      type="number"
+                      placeholder="Profit $"
+                      value={Math.round(profit) || ""}
+                      onChange={(e) => {
+                        const profitDollars = Number(e.target.value);
+                        if (svc.job_value > 0) {
+                          const pct = Math.min(100, Math.max(0, Math.round((profitDollars / svc.job_value) * 100)));
+                          onUpdateService(svc.id, "margin", pct);
+                        }
+                      }}
+                      className="pl-7"
+                    />
+                  </div>
+                  <span className="text-sm text-[#64748B]">profit per job</span>
                 </div>
                 <p className="mt-1 text-xs text-[#94A3B8]">
                   {marginRange.label}
@@ -783,16 +804,29 @@ function StepRewards({
                 </div>
               </div>
 
-              {/* Live calculated values */}
-              <div className="mt-3 flex flex-wrap gap-3 text-sm">
-                <span className="rounded bg-teal-50 px-2 py-1 font-medium text-[#0D9488]">
-                  ${rewardDollars.toLocaleString()} reward
-                </span>
-                <span className="rounded bg-amber-50 px-2 py-1 font-medium text-amber-600">
+              {/* Referral cost dollar input */}
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <label className="text-sm font-medium text-[#475569]">
+                  Reward per referral:
+                </label>
+                <div className="relative w-28">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    type="number"
+                    value={rewardDollars || ""}
+                    onChange={(e) => {
+                      const dollars = Number(e.target.value);
+                      if (profit > 0) {
+                        const pct = Math.min(30, Math.max(1, Math.round((dollars / profit) * 100)));
+                        onUpdateService(svc.id, "referral_percentage", pct);
+                      }
+                    }}
+                    className="pl-7"
+                  />
+                </div>
+                <span className="text-sm text-[#64748B]">=</span>
+                <span className="rounded bg-amber-50 px-2 py-1 text-sm font-medium text-amber-600">
                   {rewardPoints.toLocaleString()} points
-                </span>
-                <span className="rounded bg-gray-100 px-2 py-1 font-medium text-[#64748B]">
-                  {svc.referral_percentage}% of profit
                 </span>
               </div>
 
