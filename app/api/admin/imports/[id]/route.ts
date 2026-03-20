@@ -225,7 +225,11 @@ export async function POST(
         continue;
       }
 
-      // Update profile with company_id, phone, address, import_id
+      // Generate activation token (expires in 7 days)
+      const activationExpires = new Date();
+      activationExpires.setDate(activationExpires.getDate() + 7);
+
+      // Update profile with company_id, phone, address, import_id, activation token
       await admin
         .from("profiles")
         .update({
@@ -236,8 +240,16 @@ export async function POST(
           state,
           zip,
           import_id: importId,
+          activation_token_expires: activationExpires.toISOString(),
         })
         .eq("id", newUser.user.id);
+
+      // Get the activation token that was auto-generated
+      const { data: profileWithToken } = await admin
+        .from("profiles")
+        .select("activation_token")
+        .eq("id", newUser.user.id)
+        .single();
 
       // Ensure email preferences (inherits drip defaults)
       await ensureEmailPreferences(newUser.user.id, admin);
@@ -246,15 +258,18 @@ export async function POST(
       if (importRecord.send_welcome && companyData) {
         const canSend = await canSendEmail(cid, "welcome_import", admin);
         if (canSend) {
+          const activateUrl = profileWithToken?.activation_token
+            ? `${baseUrl}/activate?token=${profileWithToken.activation_token}`
+            : `${baseUrl}/dashboard`;
           sendTransactionalEmail({
             template: "welcome",
             to: email,
             props: {
               customerName: fullName,
-              dashboardUrl: `${baseUrl}/dashboard`,
+              dashboardUrl: activateUrl,
               companyName: companyData.name,
               logoUrl: companyData.logo_url,
-              primaryColor: (settings.brandColor as string) || "#6366f1",
+              primaryColor: (settings.brandColor as string) || "#0D9488",
             },
             companyId: cid,
             customerId: newUser.user.id,

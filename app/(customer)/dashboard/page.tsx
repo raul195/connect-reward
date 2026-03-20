@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import type { Profile, PointTransaction, Service } from "@/lib/types";
 import type { ActivePromotion } from "@/lib/promotions";
+import { WelcomeModal } from "@/components/shared/WelcomeModal";
 
 // ── Animated counter ────────────────────────────
 function AnimatedCounter({ target, duration = 1200 }: { target: number; duration?: number }) {
@@ -466,6 +467,8 @@ export default function CustomerDashboard() {
   const [loading, setLoading] = useState(true);
 
   const [useSample, setUseSample] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [companyName, setCompanyName] = useState("your business");
 
   const fetchReviewLinks = useCallback(async () => {
     try {
@@ -473,6 +476,16 @@ export default function CustomerDashboard() {
       if (res.ok) {
         const { data } = await res.json();
         setReviewLinks(data ?? []);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const fetchCompanyName = useCallback(async () => {
+    try {
+      const res = await fetch("/api/company");
+      if (res.ok) {
+        const { company } = await res.json();
+        if (company?.name) setCompanyName(company.name);
       }
     } catch { /* ignore */ }
   }, []);
@@ -494,6 +507,11 @@ export default function CustomerDashboard() {
         pointsThisMonth: data.stats?.pointsThisMonth ?? 0,
         rewardsRedeemed: data.stats?.rewardsRedeemed ?? 0,
       });
+
+      // Show welcome modal on first visit
+      if (p && !p.has_seen_welcome) {
+        setShowWelcome(true);
+      }
 
       // Show sample data for new non-demo users
       if (
@@ -517,7 +535,8 @@ export default function CustomerDashboard() {
   useEffect(() => {
     fetchData();
     fetchReviewLinks();
-  }, [fetchData, fetchReviewLinks]);
+    fetchCompanyName();
+  }, [fetchData, fetchReviewLinks, fetchCompanyName]);
 
   if (loading) {
     return (
@@ -534,9 +553,21 @@ export default function CustomerDashboard() {
 
   const isNewUser = stats.totalReferrals === 0 && profile.total_points === 0;
 
+  async function dismissWelcome() {
+    setShowWelcome(false);
+    try {
+      await fetch("/api/customer/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ has_seen_welcome: true }),
+      });
+    } catch { /* ignore */ }
+  }
+
   return (
     <div className="space-y-6">
       {useSample && <SampleDataBanner />}
+      <WelcomeModal open={showWelcome} companyName={companyName} onDismiss={dismissWelcome} />
       {/* Welcome banner for new customers */}
       {isNewUser && (
         <Card className="border-teal-200 bg-gradient-to-r from-teal-50 to-emerald-50">

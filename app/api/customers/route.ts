@@ -100,8 +100,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 6. Update the auto-created profile with company_id and extra fields
-  //    The handle_new_user trigger already created a profile row.
+  // 6. Set activation token expiry and update profile
+  const activationExpires = new Date();
+  activationExpires.setDate(activationExpires.getDate() + 7);
+
   const { error: updateError } = await admin
     .from("profiles")
     .update({
@@ -111,6 +113,7 @@ export async function POST(request: NextRequest) {
       city,
       state,
       zip,
+      activation_token_expires: activationExpires.toISOString(),
     })
     .eq("id", newUser.user.id);
 
@@ -121,7 +124,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Send welcome email (fire-and-forget)
+  // Get the activation token
+  const { data: profileWithToken } = await admin
+    .from("profiles")
+    .select("activation_token")
+    .eq("id", newUser.user.id)
+    .single();
+
+  // Send welcome email with activation link
   const { data: companyData } = await admin
     .from("companies")
     .select("name, logo_url, settings")
@@ -131,16 +141,19 @@ export async function POST(request: NextRequest) {
   if (companyData) {
     const settings = (companyData.settings ?? {}) as Record<string, unknown>;
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io";
+    const activateUrl = profileWithToken?.activation_token
+      ? `${baseUrl}/activate?token=${profileWithToken.activation_token}`
+      : `${baseUrl}/dashboard`;
 
     sendTransactionalEmail({
       template: "welcome",
       to: email,
       props: {
         customerName: fullName,
-        dashboardUrl: `${baseUrl}/dashboard`,
+        dashboardUrl: activateUrl,
         companyName: companyData.name,
         logoUrl: companyData.logo_url,
-        primaryColor: (settings.brandColor as string) || "#6366f1",
+        primaryColor: (settings.brandColor as string) || "#0D9488",
       },
       companyId,
       customerId: newUser.user.id,

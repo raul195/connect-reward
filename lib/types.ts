@@ -60,6 +60,9 @@ export interface Profile {
   last_activity: string | null;
   email_status: 'unknown' | 'valid' | 'bounced' | 'complained';
   import_id: string | null;
+  activation_token: string | null;
+  activation_token_expires: string | null;
+  has_seen_welcome: boolean;
   created_at: string;
   updated_at: string;
 }
