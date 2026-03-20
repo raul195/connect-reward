@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3. Create company
+    // 3. Create company (minimal — onboarding collects the rest)
     const slug = companyName
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
         slug,
         plan_tier: "free",
         onboarding_completed: false,
+        is_active: true,
         settings: {},
       })
       .select()
