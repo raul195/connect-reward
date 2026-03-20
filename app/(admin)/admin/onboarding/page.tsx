@@ -161,7 +161,7 @@ export default function OnboardingPage() {
       if (!res.ok) return;
       const { data } = await res.json();
       if (data?.onboarding_completed) {
-        window.location.href = "/admin";
+        router.push("/admin");
         return;
       }
       if (data?.plan_tier) {
@@ -332,8 +332,7 @@ export default function OnboardingPage() {
       }
 
       toast.success("Your program is live!");
-      // Use full page navigation to ensure company cache is refreshed
-      window.location.href = "/admin";
+      router.push("/admin");
     } catch {
       toast.error("Something went wrong");
       setSaving(false);

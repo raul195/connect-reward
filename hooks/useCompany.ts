@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Company } from "@/lib/types";
 
-export function useCompany(companyId: string | null | undefined) {
+export function useCompany(companyId: string | null | undefined, refreshKey?: string) {
   const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -12,6 +12,8 @@ export function useCompany(companyId: string | null | undefined) {
       setLoading(false);
       return;
     }
+
+    setLoading(true);
 
     async function fetchCompany() {
       try {
@@ -29,7 +31,7 @@ export function useCompany(companyId: string | null | undefined) {
     }
 
     fetchCompany();
-  }, [companyId]);
+  }, [companyId, refreshKey]);
 
   return { company, loading };
 }

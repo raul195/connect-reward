@@ -90,9 +90,10 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const { profile, loading: profileLoading } = useProfile();
-  const { company, loading: companyLoading } = useCompany(profile?.company_id);
   const router = useRouter();
   const pathname = usePathname();
+  // Pass pathname as refreshKey so company data is refetched on every navigation
+  const { company, loading: companyLoading } = useCompany(profile?.company_id, pathname);
 
   const isOnboarding = pathname.startsWith("/admin/onboarding");
   const isLoading = profileLoading || companyLoading;

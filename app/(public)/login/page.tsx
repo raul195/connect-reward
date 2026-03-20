@@ -55,14 +55,14 @@ function LoginForm() {
     if (user) {
       const role = user.user_metadata?.role as string | undefined;
 
-      // Use full page navigation to ensure session cookies propagate
       if (role === "business" || role === "business_owner") {
-        window.location.href = "/admin";
+        router.push("/admin");
       } else if (role === "super_admin") {
-        window.location.href = "/super-admin";
+        router.push("/super-admin");
       } else {
-        window.location.href = redirect;
+        router.push(redirect);
       }
+      router.refresh();
       return;
     }
   }
