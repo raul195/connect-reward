@@ -54,6 +54,7 @@ const US_STATES = [
 ];
 
 const MAPPABLE_FIELDS: { value: MappableField; label: string }[] = [
+  { value: "fullName", label: "Full Name" },
   { value: "firstName", label: "First Name" },
   { value: "lastName", label: "Last Name" },
   { value: "email", label: "Email" },
@@ -359,7 +360,7 @@ export default function CustomersPage() {
       })
       .filter((mapped) => {
         // Only include valid rows
-        const fullName = buildFullName(mapped.firstName, mapped.lastName);
+        const fullName = buildFullName(mapped.firstName, mapped.lastName, mapped.fullName);
         return fullName && mapped.email && mapped.phone.replace(/\D/g, "").length === 10;
       });
 

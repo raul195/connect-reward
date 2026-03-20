@@ -708,23 +708,23 @@ function ServiceRewardCard({
     String(Math.round(profit * (svc.referral_percentage / 100)) || "")
   );
 
-  // Track which input the user is actively editing
-  const [editingProfit, setEditingProfit] = useState(false);
-  const [editingReward, setEditingReward] = useState(false);
+  // Refs to track whether the user is actively typing — never overwrite during editing
+  const editingProfitRef = useRef(false);
+  const editingRewardRef = useRef(false);
 
-  // When slider/percentage changes and user is NOT editing dollar fields, sync displays
-  const prevMargin = useRef(svc.margin);
-  const prevRefPct = useRef(svc.referral_percentage);
+  // Sync slider → dollar display ONLY when user is NOT typing in that field
+  useEffect(() => {
+    if (!editingProfitRef.current) {
+      setProfitInput(String(Math.round(svc.job_value * (svc.margin / 100)) || ""));
+    }
+  }, [svc.margin, svc.job_value]);
 
-  if (svc.margin !== prevMargin.current && !editingProfit) {
-    prevMargin.current = svc.margin;
-    setProfitInput(String(Math.round(svc.job_value * (svc.margin / 100)) || ""));
-  }
-  if (svc.referral_percentage !== prevRefPct.current && !editingReward) {
-    prevRefPct.current = svc.referral_percentage;
-    const p = svc.job_value * (svc.margin / 100);
-    setRewardInput(String(Math.round(p * (svc.referral_percentage / 100)) || ""));
-  }
+  useEffect(() => {
+    if (!editingRewardRef.current) {
+      const p = svc.job_value * (svc.margin / 100);
+      setRewardInput(String(Math.round(p * (svc.referral_percentage / 100)) || ""));
+    }
+  }, [svc.referral_percentage, svc.margin, svc.job_value]);
 
   // Points are ALWAYS calculated from the dollar input, never from the slider
   const displayRewardDollars = Number(rewardInput) || 0;
@@ -769,10 +769,10 @@ function ServiceRewardCard({
             <Input
               type="text" inputMode="numeric" placeholder="Profit $"
               value={profitInput}
-              onFocus={() => setEditingProfit(true)}
+              onFocus={() => { editingProfitRef.current = true; }}
               onChange={(e) => setProfitInput(e.target.value)}
               onBlur={() => {
-                setEditingProfit(false);
+                editingProfitRef.current = false;
                 const dollars = Number(profitInput);
                 if (svc.job_value > 0 && dollars > 0) {
                   const pct = Math.min(100, Math.max(1, Math.round((dollars / svc.job_value) * 100)));
@@ -808,10 +808,10 @@ function ServiceRewardCard({
           <Input
             type="text" inputMode="numeric"
             value={rewardInput}
-            onFocus={() => setEditingReward(true)}
+            onFocus={() => { editingRewardRef.current = true; }}
             onChange={(e) => setRewardInput(e.target.value)}
             onBlur={() => {
-              setEditingReward(false);
+              editingRewardRef.current = false;
               const dollars = Number(rewardInput);
               if (profit > 0 && dollars > 0) {
                 const pct = Math.min(30, Math.max(1, Math.round((dollars / profit) * 100)));

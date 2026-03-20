@@ -139,6 +139,7 @@ export async function POST(
       const raw = row.raw_data as Record<string, string>;
 
       // Extract fields from raw_data (already mapped by client)
+      const rawFullName = (raw.fullName || "").trim();
       const firstName = (raw.firstName || "").trim();
       const lastName = (raw.lastName || "").trim();
       const email = (raw.email || "").trim().toLowerCase();
@@ -148,7 +149,8 @@ export async function POST(
       const state = (raw.state || "").trim() || null;
       const zip = (raw.zip || "").trim() || null;
 
-      const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+      // Support fullName field — split on first space if no firstName/lastName provided
+      const fullName = rawFullName || [firstName, lastName].filter(Boolean).join(" ").trim();
 
       // Validate
       if (!fullName || !email || !phone) {

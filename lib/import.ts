@@ -4,6 +4,7 @@ import { isValidEmail, isValidPhone } from "@/lib/validation";
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export type MappableField =
+  | "fullName"
   | "firstName"
   | "lastName"
   | "email"
@@ -30,6 +31,7 @@ export interface ValidationResult {
 }
 
 export interface MappedRow {
+  fullName: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -43,6 +45,12 @@ export interface MappedRow {
 // ── Header auto-detection ──────────────────────────────────────────────────
 
 const HEADER_MAP: Record<string, MappableField> = {
+  full_name: "fullName",
+  "full name": "fullName",
+  fullname: "fullName",
+  name: "fullName",
+  customer_name: "fullName",
+  "customer name": "fullName",
   first_name: "firstName",
   "first name": "firstName",
   firstname: "firstName",
@@ -122,6 +130,7 @@ export function applyMapping(
   mapping: ColumnMapping
 ): MappedRow {
   const result: MappedRow = {
+    fullName: "",
     firstName: "",
     lastName: "",
     email: "",
@@ -142,8 +151,20 @@ export function applyMapping(
   return result;
 }
 
-export function buildFullName(firstName: string, lastName: string): string {
+export function buildFullName(firstName: string, lastName: string, fullName?: string): string {
+  // If fullName is provided, use it directly
+  if (fullName?.trim()) return fullName.trim();
   return [firstName, lastName].filter(Boolean).join(" ").trim();
+}
+
+export function splitFullName(fullName: string): { firstName: string; lastName: string } {
+  const trimmed = fullName.trim();
+  const spaceIndex = trimmed.indexOf(" ");
+  if (spaceIndex === -1) return { firstName: trimmed, lastName: "" };
+  return {
+    firstName: trimmed.slice(0, spaceIndex),
+    lastName: trimmed.slice(spaceIndex + 1),
+  };
 }
 
 export function validateRow(
@@ -154,7 +175,7 @@ export function validateRow(
   const mapped = applyMapping(row, headers, mapping);
   const errors: string[] = [];
 
-  const fullName = buildFullName(mapped.firstName, mapped.lastName);
+  const fullName = buildFullName(mapped.firstName, mapped.lastName, mapped.fullName);
   if (!fullName) errors.push("Name is required");
   if (!mapped.email) errors.push("Email is required");
   else if (!isValidEmail(mapped.email)) errors.push("Invalid email format");
