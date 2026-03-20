@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/api-helpers";
 import { checkAndAwardAchievements } from "@/lib/achievements-engine";
+import { Resend } from "resend";
 
 export async function GET() {
   const result = await getAuthContext();
@@ -119,6 +120,31 @@ export async function POST(request: NextRequest) {
 
   // Check achievements (first_referral_submitted, quick_start, etc.)
   checkAndAwardAchievements(user.id, profile.company_id!, admin).catch((err) => console.error("Background task failed:", err));
+
+  // Notify business owner about the new referral (all plans)
+  const { data: businessOwner } = await admin
+    .from("profiles")
+    .select("email, full_name")
+    .eq("company_id", profile.company_id!)
+    .in("role", ["business_owner", "business"])
+    .limit(1)
+    .single();
+
+  if (businessOwner) {
+    const { data: companyData } = await admin
+      .from("companies")
+      .select("name")
+      .eq("id", profile.company_id!)
+      .single();
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    resend.emails.send({
+      from: "Connect Reward <notifications@connectreward.io>",
+      to: businessOwner.email,
+      subject: `New Referral Submitted — ${referralName}`,
+      text: `${profile.full_name} just submitted a new referral!\n\nReferred: ${referralName}\nEmail: ${referralEmail}\nPhone: ${referralPhone}${notes ? `\nNotes: ${notes}` : ""}\n\nLog in to review this referral: ${process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io"}/admin/referrals`,
+    }).catch((err) => console.error("Referral notification email failed:", err));
+  }
 
   return NextResponse.json({ success: true });
 }
