@@ -4,10 +4,19 @@ import { updateSession } from "@/lib/supabase/middleware";
 // Routes that require authentication
 const AUTH_ROUTES = ["/admin", "/dashboard", "/super-admin"];
 
+// Routes that must NEVER be redirected (prevents loops)
+const NEVER_REDIRECT = ["/login", "/signup", "/admin/onboarding"];
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Refresh session cookies on every request
+  // Never redirect login, signup, or onboarding (prevents loops)
+  if (NEVER_REDIRECT.some((route) => pathname.startsWith(route))) {
+    const { supabaseResponse } = await updateSession(request);
+    return supabaseResponse;
+  }
+
+  // Refresh session cookies
   const { user, supabaseResponse } = await updateSession(request);
 
   // Check if this is a protected route
@@ -30,6 +39,13 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon\\.ico|.*\\.png$|.*\\.jpg$|.*\\.jpeg$|.*\\.svg$|.*\\.ico$|.*\\.json$|.*\\.js$|.*\\.css$|.*\\.webp$|.*\\.woff2?$|api/).*)",
+    /*
+     * Run middleware ONLY on app routes.
+     * Exclude everything that is NOT a page route:
+     * - _next (all Next.js internals: static, image, chunks, etc.)
+     * - api (API routes handle their own auth)
+     * - Files with extensions (static assets)
+     */
+    "/((?!_next|api|.*\\..*).*)",
   ],
 };
