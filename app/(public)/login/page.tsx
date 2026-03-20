@@ -55,6 +55,8 @@ function LoginForm() {
     if (user) {
       const role = user.user_metadata?.role as string | undefined;
 
+      // refresh() first to update the server's cookie state, then push
+      router.refresh();
       if (role === "business" || role === "business_owner") {
         router.push("/admin");
       } else if (role === "super_admin") {
@@ -62,7 +64,6 @@ function LoginForm() {
       } else {
         router.push(redirect);
       }
-      router.refresh();
       return;
     }
   }

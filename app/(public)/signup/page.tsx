@@ -53,20 +53,29 @@ export default function SignupPage() {
 
       // 2. Sign in with the new credentials
       const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (signInError) {
+      if (signInError || !signInData.session) {
         setError("Account created but sign-in failed. Please go to the login page.");
         setLoading(false);
         return;
       }
 
-      // 3. Redirect to admin (onboarding gate will redirect to wizard)
-      router.push("/admin");
+      // 3. Verify session is established before navigating
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError("Account created but session failed. Please go to the login page.");
+        setLoading(false);
+        return;
+      }
+
+      // 4. Navigate to admin — onboarding gate will redirect to wizard
+      //    refresh() first to update the server's cookie state, then push
       router.refresh();
+      router.push("/admin");
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);
