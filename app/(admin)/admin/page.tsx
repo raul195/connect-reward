@@ -128,7 +128,7 @@ export default function AdminDashboard() {
       const m = data.metrics as Metrics;
       const isDemo = isDemoAccount(profile?.email);
 
-      if (m.activeCustomers === 0 && m.totalReferrals === 0 && !isDemo) {
+      if (m.activeCustomers === 0 && m.totalReferrals === 0 && isDemo) {
         setMetrics(sampleAdminDashboard.metrics);
         setPipeline(sampleAdminDashboard.pipeline);
         setActivity(sampleAdminDashboard.activity);
@@ -140,10 +140,12 @@ export default function AdminDashboard() {
         setUseSample(false);
       }
     } catch {
-      setMetrics(sampleAdminDashboard.metrics);
-      setPipeline(sampleAdminDashboard.pipeline);
-      setActivity(sampleAdminDashboard.activity);
-      setUseSample(true);
+      if (isDemoAccount(profile?.email)) {
+        setMetrics(sampleAdminDashboard.metrics);
+        setPipeline(sampleAdminDashboard.pipeline);
+        setActivity(sampleAdminDashboard.activity);
+        setUseSample(true);
+      }
     }
     setLoading(false);
   }, [profile?.email]);

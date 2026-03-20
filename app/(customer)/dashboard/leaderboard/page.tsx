@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useProfile } from "@/hooks/useProfile";
+import { isDemoAccount } from "@/lib/demo";
 import { TierBadge } from "@/components/shared/TierBadge";
 import { sampleCustomerLeaderboard } from "@/lib/sample-data";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,6 +28,7 @@ function privacyName(fullName: string, isCurrentUser: boolean): string {
 }
 
 export default function LeaderboardPage() {
+  const { profile } = useProfile();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,7 +44,7 @@ export default function LeaderboardPage() {
       const e = (data.entries ?? []) as LeaderboardEntry[];
       setCurrentUserId(data.currentUserId ?? null);
 
-      if (e.length === 0) {
+      if (e.length === 0 && isDemoAccount(profile?.email)) {
         const s = sampleCustomerLeaderboard;
         setEntries(s.entries as unknown as LeaderboardEntry[]);
         setCurrentUserId(s.currentUserId);
@@ -52,7 +55,7 @@ export default function LeaderboardPage() {
       // fetch error
     }
     setLoading(false);
-  }, [timeFilter]);
+  }, [timeFilter, profile?.email]);
 
   useEffect(() => {
     fetchLeaderboard();

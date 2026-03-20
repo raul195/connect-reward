@@ -55,7 +55,7 @@ export default function TeamPage() {
       if (!res.ok) throw new Error("Failed to fetch team");
       const data = await res.json();
 
-      if (data.members.length <= 1 && !isDemoAccount(adminProfile.email)) {
+      if (data.members.length <= 1 && isDemoAccount(adminProfile?.email)) {
         setMembers(sampleAdminTeam.members as Profile[]);
         setUseSample(true);
       } else {
@@ -63,8 +63,10 @@ export default function TeamPage() {
         setUseSample(false);
       }
     } catch {
-      setMembers(sampleAdminTeam.members as Profile[]);
-      setUseSample(true);
+      if (isDemoAccount(adminProfile?.email)) {
+        setMembers(sampleAdminTeam.members as Profile[]);
+        setUseSample(true);
+      }
     }
     setLoading(false);
   }, [adminProfile?.company_id, adminProfile?.email]);

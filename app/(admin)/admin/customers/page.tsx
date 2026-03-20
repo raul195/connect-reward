@@ -157,7 +157,7 @@ export default function CustomersPage() {
       if (!res.ok) throw new Error("Failed to fetch customers");
       const data = await res.json();
 
-      if (data.total === 0 && !isDemoAccount(adminProfile.email)) {
+      if (data.total === 0 && isDemoAccount(adminProfile?.email)) {
         setCustomers(sampleAdminCustomers.customers as Profile[]);
         setTotal(sampleAdminCustomers.total);
         setUseSample(true);
@@ -167,9 +167,11 @@ export default function CustomersPage() {
         setUseSample(false);
       }
     } catch {
-      setCustomers(sampleAdminCustomers.customers as Profile[]);
-      setTotal(sampleAdminCustomers.total);
-      setUseSample(true);
+      if (isDemoAccount(adminProfile?.email)) {
+        setCustomers(sampleAdminCustomers.customers as Profile[]);
+        setTotal(sampleAdminCustomers.total);
+        setUseSample(true);
+      }
     }
     setLoading(false);
   }, [adminProfile?.company_id, adminProfile?.email, page, search, tierFilter, sortCol, sortAsc]);

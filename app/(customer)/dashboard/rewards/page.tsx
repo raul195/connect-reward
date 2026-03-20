@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useProfile } from "@/hooks/useProfile";
 import { useCompany } from "@/hooks/useCompany";
+import { isDemoAccount } from "@/lib/demo";
 import { sampleCustomerRewards } from "@/lib/sample-data";
 import { SampleDataBanner } from "@/components/shared/SampleDataBanner";
 import type confettiType from "canvas-confetti";
@@ -63,7 +64,7 @@ export default function RewardsCatalog() {
       const data = await res.json();
 
       const rw = (data.rewards ?? []) as Reward[];
-      if (rw.length === 0) {
+      if (rw.length === 0 && isDemoAccount(profile?.email)) {
         setRewards(sampleCustomerRewards.rewards as unknown as Reward[]);
         setUseSample(true);
       } else {

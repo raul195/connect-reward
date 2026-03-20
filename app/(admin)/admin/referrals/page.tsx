@@ -70,7 +70,7 @@ function ReferralManagementInner() {
       if (!res.ok) throw new Error("Failed to fetch referrals");
       const data = await res.json();
 
-      if (data.stats.total === 0 && !isDemoAccount(adminProfile.email)) {
+      if (data.stats.total === 0 && isDemoAccount(adminProfile?.email)) {
         setReferrals(sampleAdminReferrals.referrals as ReferralRow[]);
         setStats(sampleAdminReferrals.stats);
         setUseSample(true);
@@ -80,9 +80,11 @@ function ReferralManagementInner() {
         setUseSample(false);
       }
     } catch {
-      setReferrals(sampleAdminReferrals.referrals as ReferralRow[]);
-      setStats(sampleAdminReferrals.stats);
-      setUseSample(true);
+      if (isDemoAccount(adminProfile?.email)) {
+        setReferrals(sampleAdminReferrals.referrals as ReferralRow[]);
+        setStats(sampleAdminReferrals.stats);
+        setUseSample(true);
+      }
     }
     setLoading(false);
   }, [adminProfile?.company_id, adminProfile?.email, statusFilter, search]);

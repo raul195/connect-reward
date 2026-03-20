@@ -499,7 +499,7 @@ export default function CustomerDashboard() {
       if (
         (data.stats?.totalReferrals ?? 0) === 0 &&
         (p?.total_points ?? 0) === 0 &&
-        !isDemoAccount(p?.email)
+        isDemoAccount(p?.email)
       ) {
         const s = sampleCustomerDashboard;
         setProfile(s.profile as unknown as Profile);

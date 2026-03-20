@@ -33,7 +33,7 @@ export default function ReportsPage() {
       if (!res.ok) throw new Error("Failed to fetch reports");
       const data = await res.json();
 
-      if (data.metrics.totalRef === 0 && !isDemoAccount(profile.email)) {
+      if (data.metrics.totalRef === 0 && isDemoAccount(profile?.email)) {
         setMetrics(sampleAdminReports.metrics);
         setRefOverTime(sampleAdminReports.refOverTime);
         setUseSample(true);
@@ -43,9 +43,11 @@ export default function ReportsPage() {
         setUseSample(false);
       }
     } catch {
-      setMetrics(sampleAdminReports.metrics);
-      setRefOverTime(sampleAdminReports.refOverTime);
-      setUseSample(true);
+      if (isDemoAccount(profile?.email)) {
+        setMetrics(sampleAdminReports.metrics);
+        setRefOverTime(sampleAdminReports.refOverTime);
+        setUseSample(true);
+      }
     }
     setLoading(false);
   }, [profile?.company_id, profile?.email]);

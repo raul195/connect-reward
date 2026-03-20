@@ -105,7 +105,7 @@ export default function RewardsManagement() {
       if (!res.ok) throw new Error("Failed to fetch rewards");
       const data = await res.json();
 
-      if (data.rewards.length === 0 && !isDemoAccount(profile.email)) {
+      if (data.rewards.length === 0 && isDemoAccount(profile?.email)) {
         setRewards(sampleAdminRewards.rewards as Reward[]);
         setUseSample(true);
       } else {
@@ -113,8 +113,10 @@ export default function RewardsManagement() {
         setUseSample(false);
       }
     } catch {
-      setRewards(sampleAdminRewards.rewards as Reward[]);
-      setUseSample(true);
+      if (isDemoAccount(profile?.email)) {
+        setRewards(sampleAdminRewards.rewards as Reward[]);
+        setUseSample(true);
+      }
     }
     setLoading(false);
   }, [profile?.company_id, profile?.email]);

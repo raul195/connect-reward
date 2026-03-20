@@ -151,7 +151,7 @@ export default function MyReferralsPage() {
       const refs = (data.referrals ?? []) as Referral[];
       const svcMap = (data.services ?? {}) as Record<string, string>;
 
-      if (refs.length === 0 && userProfile && !isDemoAccount(userProfile.email)) {
+      if (refs.length === 0 && userProfile && isDemoAccount(userProfile?.email)) {
         const s = sampleCustomerReferrals;
         setReferrals(s.referrals as unknown as Referral[]);
         setServiceMap(s.services);

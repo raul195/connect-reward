@@ -161,22 +161,27 @@ export async function POST(request: NextRequest) {
 
     // 7. Send welcome email to business owner
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://connectreward.io";
-    sendTransactionalEmail({
-      template: "business_welcome",
-      to: email,
-      props: {
-        ownerName: fullName,
-        businessName: companyName,
-        dashboardUrl: `${baseUrl}/admin`,
-        companyName: "Connect Reward",
-        logoUrl: null,
-        primaryColor: "#0D9488",
-      },
-      companyId: company.id,
-      customerId: userId,
-      preferences: null,
-      adminClient: admin,
-    }).catch((err) => console.error("Welcome email failed:", err));
+    try {
+      const emailResult = await sendTransactionalEmail({
+        template: "business_welcome",
+        to: email,
+        props: {
+          ownerName: fullName,
+          businessName: companyName,
+          dashboardUrl: `${baseUrl}/admin`,
+          companyName: "Connect Reward",
+          logoUrl: null,
+          primaryColor: "#0D9488",
+        },
+        companyId: company.id,
+        customerId: userId,
+        preferences: null,
+        adminClient: admin,
+      });
+      console.log("Welcome email result:", JSON.stringify(emailResult));
+    } catch (err) {
+      console.error("Welcome email failed:", err);
+    }
 
     // 8. Notify super admin
     const adminEmail = process.env.ADMIN_EMAIL;

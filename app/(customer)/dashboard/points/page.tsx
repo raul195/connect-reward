@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { relativeTime } from "@/lib/relative-time";
+import { useProfile } from "@/hooks/useProfile";
+import { isDemoAccount } from "@/lib/demo";
 import { sampleCustomerPoints } from "@/lib/sample-data";
 import { SampleDataBanner } from "@/components/shared/SampleDataBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +20,7 @@ const TYPE_CONFIG: Record<PointTxType, { label: string; icon: React.ElementType;
 };
 
 export default function PointsHistoryPage() {
+  const { profile } = useProfile();
   const [transactions, setTransactions] = useState<PointTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [useSample, setUseSample] = useState(false);
@@ -29,7 +32,7 @@ export default function PointsHistoryPage() {
       const data = await res.json();
 
       const txs = (data.transactions ?? []) as PointTransaction[];
-      if (txs.length === 0) {
+      if (txs.length === 0 && isDemoAccount(profile?.email)) {
         setTransactions(sampleCustomerPoints.transactions as unknown as PointTransaction[]);
         setUseSample(true);
       } else {
@@ -39,7 +42,7 @@ export default function PointsHistoryPage() {
       // fetch error
     }
     setLoading(false);
-  }, []);
+  }, [profile?.email]);
 
   useEffect(() => {
     fetchTransactions();
