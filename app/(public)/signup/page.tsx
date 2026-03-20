@@ -36,54 +36,41 @@ export default function SignupPage() {
 
     setLoading(true);
 
-    const supabase = createClient();
-
-    // 1. Create auth user with metadata
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          role: "business_owner",
-        },
-      },
-    });
-
-    if (authError) {
-      setError(authError.message);
-      setLoading(false);
-      return;
-    }
-
-    if (!authData.user) {
-      setError("Something went wrong. Please try again.");
-      setLoading(false);
-      return;
-    }
-
-    // 2. Create company via API route
     try {
-      const res = await fetch("/api/company", {
+      // 1. Create account, company, and everything server-side
+      const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: companyName }),
+        body: JSON.stringify({ fullName, companyName, email, password }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error || "Failed to create company.");
+        setError(data.error || "Failed to create account.");
         setLoading(false);
         return;
       }
-    } catch {
-      setError("Failed to create company. Please try again.");
-      setLoading(false);
-      return;
-    }
 
-    router.push("/admin");
-    router.refresh();
+      // 2. Sign in with the new credentials
+      const supabase = createClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        setError("Account created but sign-in failed. Please go to the login page.");
+        setLoading(false);
+        return;
+      }
+
+      // 3. Redirect to admin (onboarding will kick in)
+      router.push("/admin");
+      router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   }
 
   return (
