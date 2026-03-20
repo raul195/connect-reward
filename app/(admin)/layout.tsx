@@ -89,28 +89,42 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { profile } = useProfile();
+  const { profile, loading: profileLoading } = useProfile();
   const { company, loading: companyLoading } = useCompany(profile?.company_id);
   const router = useRouter();
   const pathname = usePathname();
 
   const isOnboarding = pathname.startsWith("/admin/onboarding");
-
-  const profileLoading = !profile;
-  const dataReady = !companyLoading && !!profile && !!company;
+  const isLoading = profileLoading || companyLoading;
 
   useEffect(() => {
-    if (!dataReady) return;
+    if (isLoading) return;
+
+    // No profile found — session invalid, redirect to login
+    if (!profile) {
+      router.replace("/login");
+      return;
+    }
+
+    // Profile exists but no company linked — redirect to login
+    if (!profile.company_id || !company) {
+      if (!isOnboarding) {
+        router.replace("/login");
+      }
+      return;
+    }
+
+    // Company loaded — enforce onboarding
     if (!company.onboarding_completed && !isOnboarding) {
       router.replace("/admin/onboarding");
     }
     if (company.onboarding_completed && isOnboarding) {
       router.replace("/admin");
     }
-  }, [dataReady, company, isOnboarding, router]);
+  }, [isLoading, profile, company, isOnboarding, router]);
 
-  // Show loading spinner while profile or company is loading
-  if (profileLoading || companyLoading) {
+  // Show loading spinner while data is loading
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
@@ -127,8 +141,8 @@ export default function AdminLayout({
     );
   }
 
-  // Block dashboard access until onboarding is completed
-  if (company && !company.onboarding_completed) {
+  // Block dashboard until onboarding is completed (shows spinner while redirect fires)
+  if (!company || !company.onboarding_completed) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
