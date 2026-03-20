@@ -114,19 +114,22 @@ export default function AdminLayout({
       return;
     }
 
-    // Profile exists but no company linked — redirect to login
-    if (!profile.company_id || !company) {
-      if (!isOnboarding) {
-        router.replace("/login");
-      }
+    // Profile exists but no company linked yet — may still be setting up
+    // Only redirect to login if we're sure setup is complete (not on onboarding)
+    if (!profile.company_id && !isOnboarding) {
+      // Company not yet created — could be mid-signup, wait a moment then check again
       return;
     }
 
+    if (!company && !isOnboarding) {
+      return; // Still loading or company not found
+    }
+
     // Company loaded — enforce onboarding
-    if (!company.onboarding_completed && !isOnboarding) {
+    if (company && !company.onboarding_completed && !isOnboarding) {
       router.replace("/admin/onboarding");
     }
-    if (company.onboarding_completed && isOnboarding) {
+    if (company && company.onboarding_completed && isOnboarding) {
       router.replace("/admin");
     }
   }, [isLoading, profile, company, isOnboarding, router]);
