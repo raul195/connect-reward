@@ -24,6 +24,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -64,22 +65,37 @@ export default function SignupPage() {
         return;
       }
 
-      // 3. Verify session is fully established before navigating
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        setError("Account created but session failed. Please go to the login page.");
-        setLoading(false);
-        return;
-      }
-
-      // 4. Wait for cookies to be written to the browser cookie jar,
-      //    then do a full navigation that includes the auth cookies
-      await new Promise((r) => setTimeout(r, 300));
-      window.location.replace("/admin");
+      // 3. Show success — let user click through to avoid cookie timing issues
+      setSuccess(true);
+      setLoading(false);
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);
     }
+  }
+
+  if (success) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex flex-col items-center py-12 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <h2 className="mt-4 text-2xl font-bold">Account Created!</h2>
+            <p className="mt-2 text-muted-foreground">
+              Your account is ready. Let&apos;s set up your referral program.
+            </p>
+            <a
+              href="/admin"
+              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:brightness-110"
+            >
+              Continue to Setup
+            </a>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
