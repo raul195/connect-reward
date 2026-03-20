@@ -47,7 +47,7 @@ function LoginForm() {
       return;
     }
 
-    // Use auth metadata for role-based redirect (avoids RLS recursion on profiles)
+    // Use auth metadata for role-based redirect
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -55,15 +55,16 @@ function LoginForm() {
     if (user) {
       const role = user.user_metadata?.role as string | undefined;
 
-      // refresh() first to update the server's cookie state, then push
-      router.refresh();
+      // Wait for cookies to be written, then navigate
+      await new Promise((r) => setTimeout(r, 300));
+
+      let dest = redirect;
       if (role === "business" || role === "business_owner") {
-        router.push("/admin");
+        dest = "/admin";
       } else if (role === "super_admin") {
-        router.push("/super-admin");
-      } else {
-        router.push(redirect);
+        dest = "/super-admin";
       }
+      window.location.replace(dest);
       return;
     }
   }

@@ -64,18 +64,18 @@ export default function SignupPage() {
         return;
       }
 
-      // 3. Verify session is established before navigating
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      // 3. Verify session is fully established before navigating
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
         setError("Account created but session failed. Please go to the login page.");
         setLoading(false);
         return;
       }
 
-      // 4. Navigate to admin — onboarding gate will redirect to wizard
-      //    refresh() first to update the server's cookie state, then push
-      router.refresh();
-      router.push("/admin");
+      // 4. Wait for cookies to be written to the browser cookie jar,
+      //    then do a full navigation that includes the auth cookies
+      await new Promise((r) => setTimeout(r, 300));
+      window.location.replace("/admin");
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);
