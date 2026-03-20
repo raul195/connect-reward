@@ -90,8 +90,10 @@ export async function POST(request: NextRequest) {
 
       if (profileError) {
         console.error("Profile creation failed:", profileError);
+        // Roll back: delete auth user so user can try again
+        await admin.auth.admin.deleteUser(userId);
         return NextResponse.json(
-          { error: "Failed to create profile." },
+          { error: "Failed to create account. Please try again." },
           { status: 500 }
         );
       }
@@ -117,9 +119,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (companyError) {
-      console.error("Company creation failed:", companyError);
+      console.error("Company creation failed:", JSON.stringify(companyError));
+      // Roll back: delete auth user and profile so user can try again
+      await admin.from("profiles").delete().eq("id", userId);
+      await admin.auth.admin.deleteUser(userId);
       return NextResponse.json(
-        { error: "Failed to create company." },
+        { error: "Failed to create company: " + companyError.message },
         { status: 500 }
       );
     }
