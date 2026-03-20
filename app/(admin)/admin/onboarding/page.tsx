@@ -694,36 +694,42 @@ function ServiceRewardCard({
   svc,
   onUpdateService,
   getProfit,
-  getRewardDollars,
-  getRewardPoints,
 }: {
   svc: ServiceEntry;
   onUpdateService: (id: string, field: keyof ServiceEntry, value: string | number) => void;
   getProfit: (s: ServiceEntry) => number;
-  getRewardDollars: (s: ServiceEntry) => number;
-  getRewardPoints: (s: ServiceEntry) => number;
 }) {
   const profit = getProfit(svc);
-  const rewardDollars = getRewardDollars(svc);
-  const rewardPoints = getRewardPoints(svc);
   const marginRange = MARGIN_RANGES[svc.industry] || MARGIN_RANGES.other;
-  const isHighReward = svc.referral_percentage > 25;
 
-  // Local string state for dollar inputs — allows free typing
+  // Dollar inputs are the SOURCE OF TRUTH when user is typing
   const [profitInput, setProfitInput] = useState(String(Math.round(profit) || ""));
-  const [rewardInput, setRewardInput] = useState(String(rewardDollars || ""));
+  const [rewardInput, setRewardInput] = useState(
+    String(Math.round(profit * (svc.referral_percentage / 100)) || "")
+  );
 
-  // Sync local inputs when the underlying percentage changes (e.g. slider drag)
-  const profitRef = useRef(profit);
-  const rewardRef = useRef(rewardDollars);
-  if (Math.round(profit) !== Math.round(profitRef.current)) {
-    profitRef.current = profit;
-    setProfitInput(String(Math.round(profit) || ""));
+  // Track which input the user is actively editing
+  const [editingProfit, setEditingProfit] = useState(false);
+  const [editingReward, setEditingReward] = useState(false);
+
+  // When slider/percentage changes and user is NOT editing dollar fields, sync displays
+  const prevMargin = useRef(svc.margin);
+  const prevRefPct = useRef(svc.referral_percentage);
+
+  if (svc.margin !== prevMargin.current && !editingProfit) {
+    prevMargin.current = svc.margin;
+    setProfitInput(String(Math.round(svc.job_value * (svc.margin / 100)) || ""));
   }
-  if (rewardDollars !== rewardRef.current) {
-    rewardRef.current = rewardDollars;
-    setRewardInput(String(rewardDollars || ""));
+  if (svc.referral_percentage !== prevRefPct.current && !editingReward) {
+    prevRefPct.current = svc.referral_percentage;
+    const p = svc.job_value * (svc.margin / 100);
+    setRewardInput(String(Math.round(p * (svc.referral_percentage / 100)) || ""));
   }
+
+  // Points are ALWAYS calculated from the dollar input, never from the slider
+  const displayRewardDollars = Number(rewardInput) || 0;
+  const displayPoints = Math.round(displayRewardDollars * 100);
+  const isHighReward = svc.referral_percentage > 25;
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5">
@@ -735,14 +741,11 @@ function ServiceRewardCard({
       {/* Margin input */}
       <div className="mt-4">
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-[#475569]">
-            Profit margin
-          </label>
+          <label className="text-sm font-medium text-[#475569]">Profit margin</label>
           <div className="group relative">
             <HelpCircle className="h-3.5 w-3.5 text-[#94A3B8] cursor-help" />
             <div className="invisible group-hover:visible absolute left-0 top-6 z-10 w-72 rounded-lg border bg-white p-3 text-xs text-[#64748B] shadow-lg">
               Your margin is your profit after labor, materials, and overhead costs.
-              For example, if a $10,000 job costs you $6,000 to deliver, your margin is 40%.
               <p className="mt-2 font-medium text-[#475569]">{marginRange.label}</p>
             </div>
           </div>
@@ -756,9 +759,7 @@ function ServiceRewardCard({
                 const v = Math.min(100, Math.max(0, Number(e.target.value)));
                 onUpdateService(svc.id, "margin", v);
               }}
-              className="pr-7"
-              min={1}
-              max={100}
+              className="pr-7" min={1} max={100}
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>
           </div>
@@ -766,12 +767,12 @@ function ServiceRewardCard({
           <div className="relative w-28">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
             <Input
-              type="text"
-              inputMode="numeric"
-              placeholder="Profit $"
+              type="text" inputMode="numeric" placeholder="Profit $"
               value={profitInput}
+              onFocus={() => setEditingProfit(true)}
               onChange={(e) => setProfitInput(e.target.value)}
               onBlur={() => {
+                setEditingProfit(false);
                 const dollars = Number(profitInput);
                 if (svc.job_value > 0 && dollars > 0) {
                   const pct = Math.min(100, Math.max(1, Math.round((dollars / svc.job_value) * 100)));
@@ -783,44 +784,34 @@ function ServiceRewardCard({
           </div>
           <span className="text-sm text-[#64748B]">profit per job</span>
         </div>
-        <p className="mt-1 text-xs text-[#94A3B8]">
-          {marginRange.label}
-        </p>
+        <p className="mt-1 text-xs text-[#94A3B8]">{marginRange.label}</p>
       </div>
 
       {/* Referral reward slider (% of profit) */}
       <div className="mt-5">
-        <label className="text-sm font-medium text-[#475569]">
-          Referral reward (% of profit)
-        </label>
+        <label className="text-sm font-medium text-[#475569]">Referral reward (% of profit)</label>
         <div className="mt-2 flex items-center gap-4">
-          <span className="w-12 text-right text-sm font-bold text-[#0D9488]">
-            {svc.referral_percentage}%
-          </span>
+          <span className="w-12 text-right text-sm font-bold text-[#0D9488]">{svc.referral_percentage}%</span>
           <Slider
             value={[svc.referral_percentage]}
             onValueChange={([v]) => onUpdateService(svc.id, "referral_percentage", v)}
-            min={1}
-            max={30}
-            step={1}
-            className="flex-1"
+            min={1} max={30} step={1} className="flex-1"
           />
         </div>
       </div>
 
-      {/* Referral cost dollar input */}
+      {/* Referral cost dollar input — SOURCE OF TRUTH for points */}
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <label className="text-sm font-medium text-[#475569]">
-          Reward per referral:
-        </label>
+        <label className="text-sm font-medium text-[#475569]">Reward per referral:</label>
         <div className="relative w-28">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
           <Input
-            type="text"
-            inputMode="numeric"
+            type="text" inputMode="numeric"
             value={rewardInput}
+            onFocus={() => setEditingReward(true)}
             onChange={(e) => setRewardInput(e.target.value)}
             onBlur={() => {
+              setEditingReward(false);
               const dollars = Number(rewardInput);
               if (profit > 0 && dollars > 0) {
                 const pct = Math.min(30, Math.max(1, Math.round((dollars / profit) * 100)));
@@ -832,7 +823,7 @@ function ServiceRewardCard({
         </div>
         <span className="text-sm text-[#64748B]">=</span>
         <span className="rounded bg-amber-50 px-2 py-1 text-sm font-medium text-amber-600">
-          {rewardPoints.toLocaleString()} points
+          {displayPoints.toLocaleString()} points
         </span>
       </div>
 
@@ -880,8 +871,6 @@ function StepRewards({
             svc={svc}
             onUpdateService={onUpdateService}
             getProfit={getProfit}
-            getRewardDollars={getRewardDollars}
-            getRewardPoints={getRewardPoints}
           />
         ))}
       </div>
