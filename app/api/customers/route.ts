@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { getAuthContext, requireAdmin } from "@/lib/api-helpers";
 import { isAtLimit } from "@/lib/plan-limits";
 import {
   sanitizeText,
@@ -12,31 +11,15 @@ import type { PlanTier } from "@/lib/types";
 import { sendTransactionalEmail } from "@/lib/email/sendEmail";
 
 export async function POST(request: NextRequest) {
-  // 1. Authenticate the caller via session cookie
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // 1. Authenticate via getAuthContext (uses admin client, avoids RLS issues)
+  const authResult = await getAuthContext();
+  if (authResult.error) return authResult.error;
+  const { profile: callerProfile, admin } = authResult.ctx;
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const forbidden = requireAdmin(callerProfile);
+  if (forbidden) return forbidden;
 
-  // 2. Verify the caller is a business/super_admin with a company
-  const { data: callerProfile } = await supabase
-    .from("profiles")
-    .select("company_id, role")
-    .eq("id", user.id)
-    .single();
-
-  if (
-    !callerProfile?.company_id ||
-    !["business", "business_owner", "super_admin"].includes(callerProfile.role)
-  ) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const companyId = callerProfile.company_id;
+  const companyId = callerProfile.company_id!;
 
   // 3. Parse and validate input
   let body: Record<string, unknown>;
@@ -80,7 +63,7 @@ export async function POST(request: NextRequest) {
   }
 
   // 4. Check plan limits
-  const { data: company } = await supabase
+  const { data: company } = await admin
     .from("companies")
     .select("plan_tier")
     .eq("id", companyId)
@@ -88,7 +71,7 @@ export async function POST(request: NextRequest) {
 
   const plan: PlanTier = company?.plan_tier ?? "free";
 
-  const { count: currentCustomers } = await supabase
+  const { count: currentCustomers } = await admin
     .from("profiles")
     .select("*", { count: "exact", head: true })
     .eq("company_id", companyId)
@@ -101,8 +84,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 5. Create the auth user via admin API (service role key)
-  const admin = createAdminClient();
+  // 5. Create the auth user via admin API (service role key — admin already from auth context)
 
   const { data: newUser, error: createError } = await admin.auth.admin.createUser({
     email,

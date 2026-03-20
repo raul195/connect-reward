@@ -95,11 +95,8 @@ export default function BillingPage() {
   const custPct = Math.min((customerCount / custLimit) * 100, 100);
   const teamPct = Math.min((teamCount / teamLimit) * 100, 100);
 
-  // Mock invoices
-  const invoices = [
-    { date: "Jan 1, 2025", amount: planInfo.price === "$0" ? "$0.00" : planInfo.price.replace("/mo", ""), status: "Paid" },
-    { date: "Dec 1, 2024", amount: planInfo.price === "$0" ? "$0.00" : planInfo.price.replace("/mo", ""), status: "Paid" },
-  ];
+  // No billing history until Stripe invoices are integrated
+  const invoices: { date: string; amount: string; status: string }[] = [];
 
   return (
     <div className="space-y-6">
@@ -205,26 +202,30 @@ export default function BillingPage() {
       <Card>
         <CardHeader><CardTitle>Billing History</CardTitle></CardHeader>
         <CardContent>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="p-3 font-medium text-muted-foreground">Date</th>
-                <th className="p-3 font-medium text-muted-foreground">Amount</th>
-                <th className="p-3 font-medium text-muted-foreground">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((inv, i) => (
-                <tr key={i} className="border-b">
-                  <td className="p-3">{inv.date}</td>
-                  <td className="p-3 font-medium">{inv.amount}</td>
-                  <td className="p-3">
-                    <Badge variant="secondary" className="bg-green-100 text-green-700 border-0">{inv.status}</Badge>
-                  </td>
+          {invoices.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">No billing history yet.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left">
+                  <th className="p-3 font-medium text-muted-foreground">Date</th>
+                  <th className="p-3 font-medium text-muted-foreground">Amount</th>
+                  <th className="p-3 font-medium text-muted-foreground">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {invoices.map((inv, i) => (
+                  <tr key={i} className="border-b">
+                    <td className="p-3">{inv.date}</td>
+                    <td className="p-3 font-medium">{inv.amount}</td>
+                    <td className="p-3">
+                      <Badge variant="secondary" className="bg-green-100 text-green-700 border-0">{inv.status}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </CardContent>
       </Card>
     </div>

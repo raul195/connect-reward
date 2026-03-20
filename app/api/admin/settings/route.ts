@@ -83,7 +83,7 @@ export async function POST(request: Request) {
 
     if (body.id) {
       // Update existing service
-      const { id, ...updates } = body;
+      const { id, action: _action, ...updates } = body;
       const { data: service, error } = await admin
         .from("services")
         .update(updates)
@@ -118,9 +118,10 @@ export async function POST(request: Request) {
         );
       }
 
+      const { action: _a, ...serviceFields } = body;
       const { data: service, error } = await admin
         .from("services")
-        .insert({ ...body, company_id: cid })
+        .insert({ ...serviceFields, company_id: cid })
         .select()
         .single();
 

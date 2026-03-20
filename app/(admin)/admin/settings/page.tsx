@@ -161,7 +161,10 @@ export default function SettingsPage() {
 
   // ── Services CRUD ──────────────────────────────
   const fetchServices = useCallback(async () => {
-    if (!profile?.company_id) return;
+    if (!profile?.company_id) {
+      setServicesLoading(false);
+      return;
+    }
     try {
       const res = await fetch("/api/admin/settings");
       if (!res.ok) throw new Error("Failed to fetch settings");
@@ -231,10 +234,8 @@ export default function SettingsPage() {
 
   async function deleteService(id: string) {
     try {
-      await fetch("/api/admin/settings", {
+      await fetch(`/api/admin/settings?serviceId=${id}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
       });
     } catch {
       toast.error("Failed to delete service.");
@@ -257,7 +258,10 @@ export default function SettingsPage() {
 
   // ── Automation settings ──────────────────────────
   const fetchAutomation = useCallback(async () => {
-    if (!profile?.company_id) return;
+    if (!profile?.company_id) {
+      setAutoLoading(false);
+      return;
+    }
     try {
       const res = await fetch("/api/admin/automation-settings");
       if (!res.ok) throw new Error();
@@ -341,7 +345,10 @@ export default function SettingsPage() {
 
   // ── Review links ──────────────────────────
   const fetchReviewLinks = useCallback(async () => {
-    if (!profile?.company_id) return;
+    if (!profile?.company_id) {
+      setReviewLinksLoaded(true);
+      return;
+    }
     try {
       const res = await fetch("/api/admin/review-links");
       if (!res.ok) return;
@@ -458,7 +465,7 @@ export default function SettingsPage() {
           <TabsTrigger value="tiers">Tiers</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="branding">Branding</TabsTrigger>
-          <TabsTrigger value="automation">Automation</TabsTrigger>
+          {!isFreePlan && <TabsTrigger value="automation">Automation</TabsTrigger>}
           <TabsTrigger value="reviews">Review Links</TabsTrigger>
           <TabsTrigger value="support">Support</TabsTrigger>
         </TabsList>
