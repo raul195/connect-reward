@@ -55,16 +55,14 @@ function LoginForm() {
     if (user) {
       const role = user.user_metadata?.role as string | undefined;
 
-      // Wait for cookies to be written, then navigate
-      await new Promise((r) => setTimeout(r, 300));
-
-      let dest = redirect;
       if (role === "business" || role === "business_owner") {
-        dest = "/admin";
+        router.push("/admin");
       } else if (role === "super_admin") {
-        dest = "/super-admin";
+        router.push("/super-admin");
+      } else {
+        router.push(redirect);
       }
-      window.location.replace(dest);
+      router.refresh();
       return;
     }
   }

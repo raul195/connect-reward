@@ -24,7 +24,6 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,64 +37,60 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      // 1. Create account, company, and everything server-side
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullName, companyName, email, password }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || "Failed to create account.");
-        setLoading(false);
-        return;
-      }
-
-      // 2. Sign in with the new credentials
       const supabase = createClient();
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+
+      // 1. Sign up directly — this creates the user AND establishes the session
+      //    in one step (email confirmation is disabled)
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            full_name: fullName,
+            role: "business_owner",
+          },
+        },
       });
 
-      if (signInError || !signInData.session) {
-        setError("Account created but sign-in failed. Please go to the login page.");
+      if (signUpError) {
+        if (signUpError.message?.includes("already been registered")) {
+          setError("An account with this email already exists. Please sign in.");
+        } else {
+          setError(signUpError.message);
+        }
         setLoading(false);
         return;
       }
 
-      // 3. Show success — let user click through to avoid cookie timing issues
-      setSuccess(true);
-      setLoading(false);
+      if (!data.session) {
+        // Email confirmation is required — shouldn't happen since it's disabled
+        setError("Please check your email to confirm your account, then sign in.");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Session is now active — create the company via API
+      //    The API reads the session from cookies set by signUp()
+      const setupRes = await fetch("/api/auth/setup-company", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companyName, fullName }),
+      });
+
+      if (!setupRes.ok) {
+        const setupData = await setupRes.json();
+        setError(setupData.error || "Account created but company setup failed. Please sign in and try again.");
+        setLoading(false);
+        return;
+      }
+
+      // 3. Everything succeeded — navigate to admin (onboarding will kick in)
+      router.push("/admin");
+      router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
       setLoading(false);
     }
-  }
-
-  if (success) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex flex-col items-center py-12 text-center">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-600"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            </div>
-            <h2 className="mt-4 text-2xl font-bold">Account Created!</h2>
-            <p className="mt-2 text-muted-foreground">
-              Your account is ready. Let&apos;s set up your referral program.
-            </p>
-            <a
-              href="/admin"
-              className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-md transition-all hover:brightness-110"
-            >
-              Continue to Setup
-            </a>
-          </CardContent>
-        </Card>
-      </div>
-    );
   }
 
   return (
