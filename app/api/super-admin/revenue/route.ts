@@ -18,7 +18,14 @@ export async function GET() {
       .select("id, name, plan_tier, created_at, updated_at")
       .order("created_at", { ascending: false });
 
-    const allCompanies = companies ?? [];
+    // Filter out orphaned companies (no linked owner profile)
+    const { data: ownerProfiles } = await admin
+      .from("profiles")
+      .select("company_id")
+      .in("role", ["business", "business_owner"])
+      .not("company_id", "is", null);
+    const activeCompanyIds = new Set((ownerProfiles ?? []).map((p) => p.company_id));
+    const allCompanies = (companies ?? []).filter((c) => activeCompanyIds.has(c.id));
     const freeCount = allCompanies.filter((c) => c.plan_tier === "free").length;
     const starterCount = allCompanies.length - freeCount;
     const mrr = starterCount * STARTER_PRICE;

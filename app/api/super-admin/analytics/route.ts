@@ -22,7 +22,7 @@ export async function GET() {
     recentRedemptionsRes,
     recentCompaniesRes,
   ] = await Promise.all([
-    // All companies with details
+    // All companies with details (filter out orphans with no linked profiles)
     admin
       .from("companies")
       .select("id, name, industry, plan_tier, created_at, updated_at, last_active")
@@ -84,8 +84,23 @@ export async function GET() {
       .limit(10),
   ]);
 
-  const companies = companiesRes.data ?? [];
+  const allCompanies = companiesRes.data ?? [];
   const customers = customersRes.data ?? [];
+
+  // Filter out orphaned companies (no linked profiles)
+  const companyIdsWithProfiles = new Set(
+    customers.map((c: { company_id: string }) => c.company_id).filter(Boolean)
+  );
+  // Also check for business owner profiles
+  const { data: ownerProfiles } = await admin
+    .from("profiles")
+    .select("company_id")
+    .in("role", ["business", "business_owner"])
+    .not("company_id", "is", null);
+  for (const p of ownerProfiles ?? []) {
+    companyIdsWithProfiles.add(p.company_id);
+  }
+  const companies = allCompanies.filter((c) => companyIdsWithProfiles.has(c.id));
   const totalReferrals = referralsRes.count ?? 0;
   const approvedReferrals = approvedReferralsRes.count ?? 0;
   const totalRedemptions = redemptionsRes.count ?? 0;
