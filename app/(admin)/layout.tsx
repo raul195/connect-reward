@@ -96,21 +96,42 @@ export default function AdminLayout({
 
   const isOnboarding = pathname.startsWith("/admin/onboarding");
 
+  const profileLoading = !profile;
+  const dataReady = !companyLoading && !!profile && !!company;
+
   useEffect(() => {
-    if (companyLoading || !profile || !company) return;
+    if (!dataReady) return;
     if (!company.onboarding_completed && !isOnboarding) {
       router.replace("/admin/onboarding");
     }
     if (company.onboarding_completed && isOnboarding) {
       router.replace("/admin");
     }
-  }, [company, companyLoading, profile, isOnboarding, router]);
+  }, [dataReady, company, isOnboarding, router]);
+
+  // Show loading spinner while profile or company is loading
+  if (profileLoading || companyLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
+      </div>
+    );
+  }
 
   // Show onboarding page without the sidebar/header chrome
   if (isOnboarding) {
     return (
       <div className="min-h-screen bg-[#F8FAFC]">
         <ErrorBoundary>{children}</ErrorBoundary>
+      </div>
+    );
+  }
+
+  // Block dashboard access until onboarding is completed
+  if (company && !company.onboarding_completed) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
       </div>
     );
   }
