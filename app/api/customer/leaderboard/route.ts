@@ -35,7 +35,8 @@ export async function GET(request: NextRequest) {
         const { count } = await admin
           .from("referrals")
           .select("*", { count: "exact", head: true })
-          .eq("submitted_by", p.id);
+          .eq("submitted_by", p.id)
+          .eq("company_id", profile.company_id!);
 
         return {
           id: p.id,
@@ -101,7 +102,8 @@ export async function GET(request: NextRequest) {
           const { count } = await admin
             .from("referrals")
             .select("*", { count: "exact", head: true })
-            .eq("submitted_by", id);
+            .eq("submitted_by", id)
+            .eq("company_id", profile.company_id!);
 
           return {
             id,

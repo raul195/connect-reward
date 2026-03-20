@@ -10,6 +10,7 @@ export async function GET() {
     .from("point_transactions")
     .select("*")
     .eq("user_id", profile.id)
+    .eq("company_id", profile.company_id!)
     .order("created_at", { ascending: false });
 
   return NextResponse.json({ transactions: transactions ?? [] });

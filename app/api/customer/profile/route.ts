@@ -11,6 +11,7 @@ export async function GET() {
     .from("point_transactions")
     .select("amount")
     .eq("user_id", profile.id)
+    .eq("company_id", profile.company_id!)
     .eq("type", "redemption");
 
   const totalRedeemed = Math.abs(
