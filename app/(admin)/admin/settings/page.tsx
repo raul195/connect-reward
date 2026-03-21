@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
-import { useCompany } from "@/hooks/useCompany";
 import { DEFAULT_SETTINGS } from "@/lib/points";
 /* Note: createClient is still imported for logo upload (Supabase Storage) */
 import { UpgradeCTA } from "@/components/shared/UpgradeCTA";
@@ -27,8 +26,7 @@ import { PLAN_LIMITS } from "@/lib/plan-limits";
 import type { PlanTier, Service, AutomationTriggerType, EmailAutomationTrigger, TonePreference, TicketCategory } from "@/lib/types";
 
 export default function SettingsPage() {
-  const { profile } = useProfile();
-  const { company } = useCompany(profile?.company_id);
+  const { profile, company } = useProfile();
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<Record<string, unknown>>({});
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -446,7 +444,7 @@ export default function SettingsPage() {
     { label: "Arizona (MST)", value: "America/Phoenix" },
   ];
 
-  const isFreePlan = company?.plan_tier === "free";
+  const isFreePlan = !company || company.plan_tier === "free";
   const planTier = (company?.plan_tier ?? "free") as PlanTier;
   const serviceLimit = PLAN_LIMITS[planTier].maxServices;
   const atServiceLimit = services.length >= serviceLimit;
@@ -666,7 +664,8 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Automation Tab */}
+        {/* Automation Tab — hidden entirely on free plan */}
+        {!isFreePlan && (
         <TabsContent value="automation">
           {isFreePlan ? (
             <UpgradeCTA message="Email automation is available on the Starter plan. Upgrade to unlock automated referral emails and campaigns." />
@@ -825,6 +824,7 @@ export default function SettingsPage() {
           </Card>
           )}
         </TabsContent>
+        )}
       </Tabs>
     </div>
   );
