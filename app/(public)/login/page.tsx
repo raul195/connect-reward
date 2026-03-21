@@ -62,7 +62,6 @@ function LoginForm() {
       } else {
         router.push(redirect);
       }
-      router.refresh();
       return;
     }
   }

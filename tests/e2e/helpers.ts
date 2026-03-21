@@ -12,7 +12,8 @@ export async function login(page: Page, email: string, password: string) {
 export async function loginAsBusiness(page: Page, email: string, password: string) {
   await login(page, email, password);
   // Should end up on /admin or /admin/onboarding
-  await page.waitForURL(/\/admin/, { timeout: 10000 });
+  // Allow extra time for cold start (profile + company fetch)
+  await page.waitForURL(/\/admin/, { timeout: 20000 });
 }
 
 export async function loginAsCustomer(page: Page, email: string, password: string) {
