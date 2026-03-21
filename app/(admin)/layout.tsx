@@ -8,7 +8,6 @@ import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { DemoModeBanner } from "@/components/shared/DemoModeBanner";
 import { FreePlanBanner } from "@/components/shared/FreePlanBanner";
 import { useProfile } from "@/hooks/useProfile";
-import { useCompany } from "@/hooks/useCompany";
 import { isFreePlan } from "@/lib/plan-limits";
 
 const adminNav: NavItem[] = [
@@ -96,14 +95,13 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { profile, loading: profileLoading } = useProfile();
+  // Single API call fetches both profile AND company — no sequential chain
+  const { profile, company, loading } = useProfile();
   const router = useRouter();
   const pathname = usePathname();
-  // Pass pathname as refreshKey so company data is refetched on every navigation
-  const { company, loading: companyLoading } = useCompany(profile?.company_id, pathname);
 
   const isOnboarding = pathname.startsWith("/admin/onboarding");
-  const isLoading = profileLoading || companyLoading;
+  const isLoading = loading;
 
   useEffect(() => {
     if (isLoading) return;

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Profile } from "@/lib/types";
+import type { Profile, Company } from "@/lib/types";
 
 export function useProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -17,6 +18,7 @@ export function useProfile() {
         }
         const data = await res.json();
         setProfile(data.profile as Profile | null);
+        setCompany(data.company as Company | null);
       } catch {
         // Network error
       }
@@ -26,5 +28,5 @@ export function useProfile() {
     fetchProfile();
   }, []);
 
-  return { profile, loading };
+  return { profile, company, loading };
 }

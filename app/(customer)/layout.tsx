@@ -5,7 +5,6 @@ import { Header } from "@/components/shared/Header";
 import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import { PoweredByFooter } from "@/components/shared/PoweredByFooter";
 import { useProfile } from "@/hooks/useProfile";
-import { useCompany } from "@/hooks/useCompany";
 import { isFreePlan } from "@/lib/plan-limits";
 import {
   LayoutDashboard,
@@ -86,8 +85,7 @@ export default function CustomerLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { profile } = useProfile();
-  const { company } = useCompany(profile?.company_id);
+  const { profile, company } = useProfile();
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">

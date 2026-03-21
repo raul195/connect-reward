@@ -17,7 +17,8 @@ export function useCompany(companyId: string | null | undefined, refreshKey?: st
 
     async function fetchCompany() {
       try {
-        const res = await fetch("/api/company");
+        // Use /api/me which returns both profile and company in one call
+        const res = await fetch("/api/me");
         if (!res.ok) {
           setLoading(false);
           return;
